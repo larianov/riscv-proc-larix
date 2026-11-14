@@ -1,0 +1,407 @@
+Analysis & Synthesis report for riscvproc
+Sat Nov 14 23:16:43 2026
+Quartus Prime Version 25.1std.0 Build 1129 10/21/2025 SC Lite Edition
+
+
+---------------------
+; Table of Contents ;
+---------------------
+  1. Legal Notice
+  2. Analysis & Synthesis Summary
+  3. Analysis & Synthesis Settings
+  4. Parallel Compilation
+  5. Analysis & Synthesis Source Files Read
+  6. Analysis & Synthesis Resource Usage Summary
+  7. Analysis & Synthesis Resource Utilization by Entity
+  8. Registers Removed During Synthesis
+  9. General Register Statistics
+ 10. Multiplexer Restructuring Statistics (Restructuring Performed)
+ 11. Port Connectivity Checks: "alu:alu_inst"
+ 12. Post-Synthesis Netlist Statistics for Top Partition
+ 13. Elapsed Time Per Partition
+ 14. Analysis & Synthesis Messages
+
+
+
+----------------
+; Legal Notice ;
+----------------
+Copyright (C) 2025  Altera Corporation. All rights reserved.
+Your use of Altera Corporation's design tools, logic functions 
+and other software and tools, and any partner logic 
+functions, and any output files from any of the foregoing 
+(including device programming or simulation files), and any 
+associated documentation or information are expressly subject 
+to the terms and conditions of the Altera Program License 
+Subscription Agreement, the Altera Quartus Prime License Agreement,
+the Altera IP License Agreement, or other applicable license
+agreement, including, without limitation, that your use is for
+the sole purpose of programming logic devices manufactured by
+Altera and sold by Altera or its authorized distributors.  Please
+refer to the Altera Software License Subscription Agreements 
+on the Quartus Prime software download page.
+
+
+
++-----------------------------------------------------------------------------------+
+; Analysis & Synthesis Summary                                                      ;
++---------------------------------+-------------------------------------------------+
+; Analysis & Synthesis Status     ; Successful - Sat Nov 14 23:16:43 2026           ;
+; Quartus Prime Version           ; 25.1std.0 Build 1129 10/21/2025 SC Lite Edition ;
+; Revision Name                   ; riscvproc                                       ;
+; Top-level Entity Name           ; top_calc                                        ;
+; Family                          ; Cyclone V                                       ;
+; Logic utilization (in ALMs)     ; N/A                                             ;
+; Total registers                 ; 992                                             ;
+; Total pins                      ; 66                                              ;
+; Total virtual pins              ; 0                                               ;
+; Total block memory bits         ; 0                                               ;
+; Total DSP Blocks                ; 0                                               ;
+; Total HSSI RX PCSs              ; 0                                               ;
+; Total HSSI PMA RX Deserializers ; 0                                               ;
+; Total HSSI TX PCSs              ; 0                                               ;
+; Total HSSI PMA TX Serializers   ; 0                                               ;
+; Total PLLs                      ; 0                                               ;
+; Total DLLs                      ; 0                                               ;
++---------------------------------+-------------------------------------------------+
+
+
++---------------------------------------------------------------------------------------------------------------------------+
+; Analysis & Synthesis Settings                                                                                             ;
++---------------------------------------------------------------------------------+--------------------+--------------------+
+; Option                                                                          ; Setting            ; Default Value      ;
++---------------------------------------------------------------------------------+--------------------+--------------------+
+; Device                                                                          ; 5CSEBA6U23I7       ;                    ;
+; Top-level entity name                                                           ; top_calc           ; riscvproc          ;
+; Family name                                                                     ; Cyclone V          ; Cyclone V          ;
+; Use smart compilation                                                           ; Off                ; Off                ;
+; Enable parallel Assembler and Timing Analyzer during compilation                ; On                 ; On                 ;
+; Enable compact report table                                                     ; Off                ; Off                ;
+; Restructure Multiplexers                                                        ; Auto               ; Auto               ;
+; MLAB Add Timing Constraints For Mixed-Port Feed-Through Mode Setting Don't Care ; Off                ; Off                ;
+; Create Debugging Nodes for IP Cores                                             ; Off                ; Off                ;
+; Preserve fewer node names                                                       ; On                 ; On                 ;
+; Intel FPGA IP Evaluation Mode                                                   ; Enable             ; Enable             ;
+; Verilog Version                                                                 ; Verilog_2001       ; Verilog_2001       ;
+; VHDL Version                                                                    ; VHDL_1993          ; VHDL_1993          ;
+; State Machine Processing                                                        ; Auto               ; Auto               ;
+; Safe State Machine                                                              ; Off                ; Off                ;
+; Extract Verilog State Machines                                                  ; On                 ; On                 ;
+; Extract VHDL State Machines                                                     ; On                 ; On                 ;
+; Ignore Verilog initial constructs                                               ; Off                ; Off                ;
+; Iteration limit for constant Verilog loops                                      ; 5000               ; 5000               ;
+; Iteration limit for non-constant Verilog loops                                  ; 250                ; 250                ;
+; Add Pass-Through Logic to Inferred RAMs                                         ; On                 ; On                 ;
+; Infer RAMs from Raw Logic                                                       ; On                 ; On                 ;
+; Parallel Synthesis                                                              ; On                 ; On                 ;
+; DSP Block Balancing                                                             ; Auto               ; Auto               ;
+; NOT Gate Push-Back                                                              ; On                 ; On                 ;
+; Power-Up Don't Care                                                             ; On                 ; On                 ;
+; Remove Redundant Logic Cells                                                    ; Off                ; Off                ;
+; Remove Duplicate Registers                                                      ; On                 ; On                 ;
+; Ignore CARRY Buffers                                                            ; Off                ; Off                ;
+; Ignore CASCADE Buffers                                                          ; Off                ; Off                ;
+; Ignore GLOBAL Buffers                                                           ; Off                ; Off                ;
+; Ignore ROW GLOBAL Buffers                                                       ; Off                ; Off                ;
+; Ignore LCELL Buffers                                                            ; Off                ; Off                ;
+; Ignore SOFT Buffers                                                             ; On                 ; On                 ;
+; Limit AHDL Integers to 32 Bits                                                  ; Off                ; Off                ;
+; Optimization Technique                                                          ; Balanced           ; Balanced           ;
+; Carry Chain Length                                                              ; 70                 ; 70                 ;
+; Auto Carry Chains                                                               ; On                 ; On                 ;
+; Auto Open-Drain Pins                                                            ; On                 ; On                 ;
+; Perform WYSIWYG Primitive Resynthesis                                           ; Off                ; Off                ;
+; Auto ROM Replacement                                                            ; On                 ; On                 ;
+; Auto RAM Replacement                                                            ; On                 ; On                 ;
+; Auto DSP Block Replacement                                                      ; On                 ; On                 ;
+; Auto Shift Register Replacement                                                 ; Auto               ; Auto               ;
+; Allow Shift Register Merging across Hierarchies                                 ; Auto               ; Auto               ;
+; Auto Clock Enable Replacement                                                   ; On                 ; On                 ;
+; Strict RAM Replacement                                                          ; Off                ; Off                ;
+; Allow Synchronous Control Signals                                               ; On                 ; On                 ;
+; Force Use of Synchronous Clear Signals                                          ; Off                ; Off                ;
+; Auto Resource Sharing                                                           ; Off                ; Off                ;
+; Allow Any RAM Size For Recognition                                              ; Off                ; Off                ;
+; Allow Any ROM Size For Recognition                                              ; Off                ; Off                ;
+; Allow Any Shift Register Size For Recognition                                   ; Off                ; Off                ;
+; Use LogicLock Constraints during Resource Balancing                             ; On                 ; On                 ;
+; Ignore translate_off and synthesis_off directives                               ; Off                ; Off                ;
+; Timing-Driven Synthesis                                                         ; On                 ; On                 ;
+; Report Parameter Settings                                                       ; On                 ; On                 ;
+; Report Source Assignments                                                       ; On                 ; On                 ;
+; Report Connectivity Checks                                                      ; On                 ; On                 ;
+; Ignore Maximum Fan-Out Assignments                                              ; Off                ; Off                ;
+; Synchronization Register Chain Length                                           ; 3                  ; 3                  ;
+; Power Optimization During Synthesis                                             ; Normal compilation ; Normal compilation ;
+; HDL message level                                                               ; Level2             ; Level2             ;
+; Suppress Register Optimization Related Messages                                 ; Off                ; Off                ;
+; Number of Removed Registers Reported in Synthesis Report                        ; 5000               ; 5000               ;
+; Number of Swept Nodes Reported in Synthesis Report                              ; 5000               ; 5000               ;
+; Number of Inverted Registers Reported in Synthesis Report                       ; 100                ; 100                ;
+; Clock MUX Protection                                                            ; On                 ; On                 ;
+; Auto Gated Clock Conversion                                                     ; Off                ; Off                ;
+; Block Design Naming                                                             ; Auto               ; Auto               ;
+; SDC constraint protection                                                       ; Off                ; Off                ;
+; Synthesis Effort                                                                ; Auto               ; Auto               ;
+; Shift Register Replacement - Allow Asynchronous Clear Signal                    ; On                 ; On                 ;
+; Pre-Mapping Resynthesis Optimization                                            ; Off                ; Off                ;
+; Analysis & Synthesis Message Level                                              ; Medium             ; Medium             ;
+; Disable Register Merging Across Hierarchies                                     ; Auto               ; Auto               ;
+; Resource Aware Inference For Block RAM                                          ; On                 ; On                 ;
+; Automatic Parallel Synthesis                                                    ; On                 ; On                 ;
+; Partial Reconfiguration Bitstream ID                                            ; Off                ; Off                ;
++---------------------------------------------------------------------------------+--------------------+--------------------+
+
+
++------------------------------------------+
+; Parallel Compilation                     ;
++----------------------------+-------------+
+; Processors                 ; Number      ;
++----------------------------+-------------+
+; Number detected on machine ; 16          ;
+; Maximum allowed            ; 16          ;
+;                            ;             ;
+; Average used               ; 1.00        ;
+; Maximum used               ; 16          ;
+;                            ;             ;
+; Usage by Processor         ; % Time Used ;
+;     Processor 1            ; 100.0%      ;
+;     Processor 2            ;   0.0%      ;
+;     Processor 3            ;   0.0%      ;
+;     Processor 4            ;   0.0%      ;
+;     Processor 5            ;   0.0%      ;
+;     Processor 6            ;   0.0%      ;
+;     Processor 7            ;   0.0%      ;
+;     Processor 8            ;   0.0%      ;
+;     Processor 9            ;   0.0%      ;
+;     Processors 10-16       ;   0.0%      ;
++----------------------------+-------------+
+
+
++-----------------------------------------------------------------------------------------------------------------------------------------+
+; Analysis & Synthesis Source Files Read                                                                                                  ;
++----------------------------------+-----------------+-----------------+--------------------------------------------------------+---------+
+; File Name with User-Entered Path ; Used in Netlist ; File Type       ; File Name with Absolute Path                           ; Library ;
++----------------------------------+-----------------+-----------------+--------------------------------------------------------+---------+
+; alu.vhd                          ; yes             ; User VHDL File  ; /home/luk/Projects/fpga_quartus/riscv/alu.vhd          ;         ;
+; ImmGen.vhd                       ; yes             ; User VHDL File  ; /home/luk/Projects/fpga_quartus/riscv/ImmGen.vhd       ;         ;
+; riscvregfile.vhd                 ; yes             ; User VHDL File  ; /home/luk/Projects/fpga_quartus/riscv/riscvregfile.vhd ;         ;
+; ControlUnit.vhd                  ; yes             ; User VHDL File  ; /home/luk/Projects/fpga_quartus/riscv/ControlUnit.vhd  ;         ;
+; top_calc.vhd                     ; yes             ; User VHDL File  ; /home/luk/Projects/fpga_quartus/riscv/top_calc.vhd     ;         ;
+; alu_mux.vhd                      ; yes             ; User VHDL File  ; /home/luk/Projects/fpga_quartus/riscv/alu_mux.vhd      ;         ;
++----------------------------------+-----------------+-----------------+--------------------------------------------------------+---------+
+
+
++---------------------------------------------------------+
+; Analysis & Synthesis Resource Usage Summary             ;
++---------------------------------------------+-----------+
+; Resource                                    ; Usage     ;
++---------------------------------------------+-----------+
+; Estimate of Logic utilization (ALMs needed) ; 1182      ;
+;                                             ;           ;
+; Combinational ALUT usage for logic          ; 1044      ;
+;     -- 7 input functions                    ; 452       ;
+;     -- 6 input functions                    ; 352       ;
+;     -- 5 input functions                    ; 101       ;
+;     -- 4 input functions                    ; 42        ;
+;     -- <=3 input functions                  ; 97        ;
+;                                             ;           ;
+; Dedicated logic registers                   ; 992       ;
+;                                             ;           ;
+; I/O pins                                    ; 66        ;
+;                                             ;           ;
+; Total DSP Blocks                            ; 0         ;
+;                                             ;           ;
+; Maximum fan-out node                        ; clk~input ;
+; Maximum fan-out                             ; 992       ;
+; Total fan-out                               ; 9321      ;
+; Average fan-out                             ; 4.30      ;
++---------------------------------------------+-----------+
+
+
++-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+; Analysis & Synthesis Resource Utilization by Entity                                                                                                                                                                   ;
++-------------------------------------+---------------------+---------------------------+-------------------+------------+------+--------------+------------------------------------------+--------------+--------------+
+; Compilation Hierarchy Node          ; Combinational ALUTs ; Dedicated Logic Registers ; Block Memory Bits ; DSP Blocks ; Pins ; Virtual Pins ; Full Hierarchy Name                      ; Entity Name  ; Library Name ;
++-------------------------------------+---------------------+---------------------------+-------------------+------------+------+--------------+------------------------------------------+--------------+--------------+
+; |top_calc                           ; 1044 (0)            ; 992 (0)                   ; 0                 ; 0          ; 66   ; 0            ; |top_calc                                ; top_calc     ; work         ;
+;    |ControlUnit:ControlUnit_inst|   ; 18 (18)             ; 0 (0)                     ; 0                 ; 0          ; 0    ; 0            ; |top_calc|ControlUnit:ControlUnit_inst   ; ControlUnit  ; work         ;
+;    |alu:alu_inst|                   ; 384 (384)           ; 0 (0)                     ; 0                 ; 0          ; 0    ; 0            ; |top_calc|alu:alu_inst                   ; alu          ; work         ;
+;    |alu_mux:alu_mux_inst|           ; 32 (32)             ; 0 (0)                     ; 0                 ; 0          ; 0    ; 0            ; |top_calc|alu_mux:alu_mux_inst           ; alu_mux      ; work         ;
+;    |riscvregfile:riscvregfile_inst| ; 610 (610)           ; 992 (992)                 ; 0                 ; 0          ; 0    ; 0            ; |top_calc|riscvregfile:riscvregfile_inst ; riscvregfile ; work         ;
++-------------------------------------+---------------------+---------------------------+-------------------+------------+------+--------------+------------------------------------------+--------------+--------------+
+Note: For table entries with two numbers listed, the numbers in parentheses indicate the number of resources of the given type used by the specific entity alone. The numbers listed outside of parentheses indicate the total resources of the given type used by the specific entity and all of its sub-entities in the hierarchy.
+
+
++-------------------------------------------------------------------------------------------+
+; Registers Removed During Synthesis                                                        ;
++---------------------------------------------+---------------------------------------------+
+; Register name                               ; Reason for Removal                          ;
++---------------------------------------------+---------------------------------------------+
+; riscvregfile:riscvregfile_inst|mem_array~69 ; Stuck at GND due to stuck port clock_enable ;
+; riscvregfile:riscvregfile_inst|mem_array~68 ; Stuck at GND due to stuck port clock_enable ;
+; riscvregfile:riscvregfile_inst|mem_array~67 ; Stuck at GND due to stuck port clock_enable ;
+; riscvregfile:riscvregfile_inst|mem_array~66 ; Stuck at GND due to stuck port clock_enable ;
+; riscvregfile:riscvregfile_inst|mem_array~65 ; Stuck at GND due to stuck port clock_enable ;
+; riscvregfile:riscvregfile_inst|mem_array~64 ; Stuck at GND due to stuck port clock_enable ;
+; riscvregfile:riscvregfile_inst|mem_array~63 ; Stuck at GND due to stuck port clock_enable ;
+; riscvregfile:riscvregfile_inst|mem_array~62 ; Stuck at GND due to stuck port clock_enable ;
+; riscvregfile:riscvregfile_inst|mem_array~61 ; Stuck at GND due to stuck port clock_enable ;
+; riscvregfile:riscvregfile_inst|mem_array~60 ; Stuck at GND due to stuck port clock_enable ;
+; riscvregfile:riscvregfile_inst|mem_array~59 ; Stuck at GND due to stuck port clock_enable ;
+; riscvregfile:riscvregfile_inst|mem_array~58 ; Stuck at GND due to stuck port clock_enable ;
+; riscvregfile:riscvregfile_inst|mem_array~57 ; Stuck at GND due to stuck port clock_enable ;
+; riscvregfile:riscvregfile_inst|mem_array~56 ; Stuck at GND due to stuck port clock_enable ;
+; riscvregfile:riscvregfile_inst|mem_array~55 ; Stuck at GND due to stuck port clock_enable ;
+; riscvregfile:riscvregfile_inst|mem_array~54 ; Stuck at GND due to stuck port clock_enable ;
+; riscvregfile:riscvregfile_inst|mem_array~53 ; Stuck at GND due to stuck port clock_enable ;
+; riscvregfile:riscvregfile_inst|mem_array~52 ; Stuck at GND due to stuck port clock_enable ;
+; riscvregfile:riscvregfile_inst|mem_array~51 ; Stuck at GND due to stuck port clock_enable ;
+; riscvregfile:riscvregfile_inst|mem_array~50 ; Stuck at GND due to stuck port clock_enable ;
+; riscvregfile:riscvregfile_inst|mem_array~49 ; Stuck at GND due to stuck port clock_enable ;
+; riscvregfile:riscvregfile_inst|mem_array~48 ; Stuck at GND due to stuck port clock_enable ;
+; riscvregfile:riscvregfile_inst|mem_array~47 ; Stuck at GND due to stuck port clock_enable ;
+; riscvregfile:riscvregfile_inst|mem_array~46 ; Stuck at GND due to stuck port clock_enable ;
+; riscvregfile:riscvregfile_inst|mem_array~45 ; Stuck at GND due to stuck port clock_enable ;
+; riscvregfile:riscvregfile_inst|mem_array~44 ; Stuck at GND due to stuck port clock_enable ;
+; riscvregfile:riscvregfile_inst|mem_array~43 ; Stuck at GND due to stuck port clock_enable ;
+; riscvregfile:riscvregfile_inst|mem_array~42 ; Stuck at GND due to stuck port clock_enable ;
+; riscvregfile:riscvregfile_inst|mem_array~41 ; Stuck at GND due to stuck port clock_enable ;
+; riscvregfile:riscvregfile_inst|mem_array~40 ; Stuck at GND due to stuck port clock_enable ;
+; riscvregfile:riscvregfile_inst|mem_array~39 ; Stuck at GND due to stuck port clock_enable ;
+; riscvregfile:riscvregfile_inst|mem_array~38 ; Stuck at GND due to stuck port clock_enable ;
+; Total Number of Removed Registers = 32      ;                                             ;
++---------------------------------------------+---------------------------------------------+
+
+
++------------------------------------------------------+
+; General Register Statistics                          ;
++----------------------------------------------+-------+
+; Statistic                                    ; Value ;
++----------------------------------------------+-------+
+; Total registers                              ; 992   ;
+; Number of registers using Synchronous Clear  ; 0     ;
+; Number of registers using Synchronous Load   ; 0     ;
+; Number of registers using Asynchronous Clear ; 0     ;
+; Number of registers using Asynchronous Load  ; 0     ;
+; Number of registers using Clock Enable       ; 992   ;
+; Number of registers using Preset             ; 0     ;
++----------------------------------------------+-------+
+
+
++--------------------------------------------------------------------------------------------------------------------------------------------------+
+; Multiplexer Restructuring Statistics (Restructuring Performed)                                                                                   ;
++--------------------+-----------+---------------+----------------------+------------------------+------------+------------------------------------+
+; Multiplexer Inputs ; Bus Width ; Baseline Area ; Area if Restructured ; Saving if Restructured ; Registered ; Example Multiplexer Output         ;
++--------------------+-----------+---------------+----------------------+------------------------+------------+------------------------------------+
+; 4:1                ; 2 bits    ; 4 LEs         ; 4 LEs                ; 0 LEs                  ; No         ; |top_calc|alu:alu_inst|ShiftLeft0  ;
+; 4:1                ; 49 bits   ; 98 LEs        ; 98 LEs               ; 0 LEs                  ; No         ; |top_calc|alu:alu_inst|ShiftRight1 ;
+; 4:1                ; 4 bits    ; 8 LEs         ; 8 LEs                ; 0 LEs                  ; No         ; |top_calc|alu:alu_inst|ShiftRight1 ;
+; 4:1                ; 4 bits    ; 8 LEs         ; 8 LEs                ; 0 LEs                  ; No         ; |top_calc|alu:alu_inst|ShiftRight0 ;
+; 4:1                ; 4 bits    ; 8 LEs         ; 8 LEs                ; 0 LEs                  ; No         ; |top_calc|alu:alu_inst|ShiftLeft0  ;
+; 4:1                ; 4 bits    ; 8 LEs         ; 8 LEs                ; 0 LEs                  ; No         ; |top_calc|alu:alu_inst|ShiftLeft0  ;
+; 4:1                ; 4 bits    ; 8 LEs         ; 8 LEs                ; 0 LEs                  ; No         ; |top_calc|alu:alu_inst|ShiftLeft0  ;
+; 15:1               ; 5 bits    ; 50 LEs        ; 50 LEs               ; 0 LEs                  ; No         ; |top_calc|alu:alu_inst|res_out[8]  ;
+; 16:1               ; 8 bits    ; 80 LEs        ; 80 LEs               ; 0 LEs                  ; No         ; |top_calc|alu:alu_inst|res_out[22] ;
+; 15:1               ; 3 bits    ; 30 LEs        ; 30 LEs               ; 0 LEs                  ; No         ; |top_calc|alu:alu_inst|res_out[13] ;
+; 17:1               ; 2 bits    ; 22 LEs        ; 20 LEs               ; 2 LEs                  ; No         ; |top_calc|alu:alu_inst|res_out[10] ;
+; 18:1               ; 3 bits    ; 36 LEs        ; 36 LEs               ; 0 LEs                  ; No         ; |top_calc|alu:alu_inst|res_out[3]  ;
+; 18:1               ; 2 bits    ; 24 LEs        ; 22 LEs               ; 2 LEs                  ; No         ; |top_calc|alu:alu_inst|res_out[25] ;
+; 19:1               ; 3 bits    ; 36 LEs        ; 36 LEs               ; 0 LEs                  ; No         ; |top_calc|alu:alu_inst|res_out[28] ;
++--------------------+-----------+---------------+----------------------+------------------------+------------+------------------------------------+
+
+
++----------------------------------------------------------------------------------------------------------------+
+; Port Connectivity Checks: "alu:alu_inst"                                                                       ;
++------+--------+----------+-------------------------------------------------------------------------------------+
+; Port ; Type   ; Severity ; Details                                                                             ;
++------+--------+----------+-------------------------------------------------------------------------------------+
+; z    ; Output ; Info     ; Connected to dangling logic. Logic that only feeds a dangling port will be removed. ;
++------+--------+----------+-------------------------------------------------------------------------------------+
+
+
++-----------------------------------------------------+
+; Post-Synthesis Netlist Statistics for Top Partition ;
++-----------------------+-----------------------------+
+; Type                  ; Count                       ;
++-----------------------+-----------------------------+
+; arriav_ff             ; 992                         ;
+;     ENA               ; 992                         ;
+; arriav_lcell_comb     ; 1044                        ;
+;     arith             ; 33                          ;
+;         1 data inputs ; 1                           ;
+;         5 data inputs ; 32                          ;
+;     extend            ; 452                         ;
+;         7 data inputs ; 452                         ;
+;     normal            ; 559                         ;
+;         2 data inputs ; 24                          ;
+;         3 data inputs ; 72                          ;
+;         4 data inputs ; 42                          ;
+;         5 data inputs ; 69                          ;
+;         6 data inputs ; 352                         ;
+; boundary_port         ; 66                          ;
+;                       ;                             ;
+; Max LUT depth         ; 10.00                       ;
+; Average LUT depth     ; 8.15                        ;
++-----------------------+-----------------------------+
+
+
++-------------------------------+
+; Elapsed Time Per Partition    ;
++----------------+--------------+
+; Partition Name ; Elapsed Time ;
++----------------+--------------+
+; Top            ; 00:00:03     ;
++----------------+--------------+
+
+
++-------------------------------+
+; Analysis & Synthesis Messages ;
++-------------------------------+
+Info: *******************************************************************
+Info: Running Quartus Prime Analysis & Synthesis
+    Info: Version 25.1std.0 Build 1129 10/21/2025 SC Lite Edition
+    Info: Processing started: Sat Nov 14 23:16:32 2026
+Info: Command: quartus_map --read_settings_files=on --write_settings_files=off riscvproc -c riscvproc
+Warning (18236): Number of processors has not been specified which may cause overloading on shared machines.  Set the global assignment NUM_PARALLEL_PROCESSORS in your QSF to an appropriate value for best performance.
+Info (20030): Parallel compilation is enabled and will use 16 of the 16 processors detected
+Info (12021): Found 2 design units, including 1 entities, in source file alu.vhd
+    Info (12022): Found design unit 1: alu-RTL File: /home/luk/Projects/fpga_quartus/riscv/alu.vhd Line: 15
+    Info (12023): Found entity 1: alu File: /home/luk/Projects/fpga_quartus/riscv/alu.vhd Line: 5
+Info (12021): Found 2 design units, including 1 entities, in source file ImmGen.vhd
+    Info (12022): Found design unit 1: ImmGen-RTL File: /home/luk/Projects/fpga_quartus/riscv/ImmGen.vhd Line: 12
+    Info (12023): Found entity 1: ImmGen File: /home/luk/Projects/fpga_quartus/riscv/ImmGen.vhd Line: 5
+Info (12021): Found 2 design units, including 1 entities, in source file riscvregfile.vhd
+    Info (12022): Found design unit 1: riscvregfile-RTL File: /home/luk/Projects/fpga_quartus/riscv/riscvregfile.vhd Line: 18
+    Info (12023): Found entity 1: riscvregfile File: /home/luk/Projects/fpga_quartus/riscv/riscvregfile.vhd Line: 5
+Info (12021): Found 2 design units, including 1 entities, in source file ControlUnit.vhd
+    Info (12022): Found design unit 1: ControlUnit-RTL File: /home/luk/Projects/fpga_quartus/riscv/ControlUnit.vhd Line: 18
+    Info (12023): Found entity 1: ControlUnit File: /home/luk/Projects/fpga_quartus/riscv/ControlUnit.vhd Line: 5
+Info (12021): Found 2 design units, including 1 entities, in source file top_calc.vhd
+    Info (12022): Found design unit 1: top_calc-RTL File: /home/luk/Projects/fpga_quartus/riscv/top_calc.vhd Line: 14
+    Info (12023): Found entity 1: top_calc File: /home/luk/Projects/fpga_quartus/riscv/top_calc.vhd Line: 5
+Info (12021): Found 2 design units, including 1 entities, in source file alu_mux.vhd
+    Info (12022): Found design unit 1: alu_mux-RTL File: /home/luk/Projects/fpga_quartus/riscv/alu_mux.vhd Line: 14
+    Info (12023): Found entity 1: alu_mux File: /home/luk/Projects/fpga_quartus/riscv/alu_mux.vhd Line: 5
+Info (12127): Elaborating entity "top_calc" for the top level hierarchy
+Info (12128): Elaborating entity "riscvregfile" for hierarchy "riscvregfile:riscvregfile_inst" File: /home/luk/Projects/fpga_quartus/riscv/top_calc.vhd Line: 25
+Info (12128): Elaborating entity "ImmGen" for hierarchy "ImmGen:ImmGen_inst" File: /home/luk/Projects/fpga_quartus/riscv/top_calc.vhd Line: 36
+Info (12128): Elaborating entity "ControlUnit" for hierarchy "ControlUnit:ControlUnit_inst" File: /home/luk/Projects/fpga_quartus/riscv/top_calc.vhd Line: 41
+Info (12128): Elaborating entity "alu_mux" for hierarchy "alu_mux:alu_mux_inst" File: /home/luk/Projects/fpga_quartus/riscv/top_calc.vhd Line: 51
+Info (12128): Elaborating entity "alu" for hierarchy "alu:alu_inst" File: /home/luk/Projects/fpga_quartus/riscv/top_calc.vhd Line: 58
+Info (276014): Found 1 instances of uninferred RAM logic
+    Info (276007): RAM logic "riscvregfile:riscvregfile_inst|mem_array" is uninferred due to asynchronous read logic File: /home/luk/Projects/fpga_quartus/riscv/riscvregfile.vhd Line: 20
+Info (286030): Timing-Driven Synthesis is running
+Info (16010): Generating hard_block partition "hard_block:auto_generated_inst"
+    Info (16011): Adding 0 node(s), including 0 DDIO, 0 PLL, 0 transceiver and 0 LCELL
+Info (21057): Implemented 2102 device resources after synthesis - the final resource count might be different
+    Info (21058): Implemented 33 input pins
+    Info (21059): Implemented 33 output pins
+    Info (21061): Implemented 2036 logic cells
+Info: Quartus Prime Analysis & Synthesis was successful. 0 errors, 1 warning
+    Info: Peak virtual memory: 563 megabytes
+    Info: Processing ended: Sat Nov 14 23:16:43 2026
+    Info: Elapsed time: 00:00:11
+    Info: Total CPU time (on all processors): 00:00:29
+
+

@@ -11,6 +11,6 @@ end entity ImmGen;
 
 architecture RTL of ImmGen is
 begin
-    imm_out <= (31 downto 12 => (imm(11))) & (11 downto 0 => imm);   
+    imm_out <= (31 downto 12 => (imm(11))) & (imm);   
 end architecture RTL;
 

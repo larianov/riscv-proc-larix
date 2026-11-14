@@ -11,7 +11,7 @@ entity riscvregfile is
         read_out_first  : out std_logic_vector(31 downto 0);
         read_out_second : out std_logic_vector(31 downto 0);
         write_en        : in  std_logic;
-        write_In        : in  std_logic_vector(31 downto 0);
+        write_In        : in  std_logic_vector(31 downto 0)
     );
 end entity riscvregfile;
 
