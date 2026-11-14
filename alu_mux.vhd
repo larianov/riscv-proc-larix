@@ -10,3 +10,8 @@ entity alu_mux is
         muxout : out std_logic_vector(31 downto 0)
     );
 end entity alu_mux;
+
+architecture RTL of alu_mux is
+begin
+    muxout <= rd2 when S = '0' else imm;
+end architecture RTL;
