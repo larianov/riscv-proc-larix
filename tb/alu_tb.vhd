@@ -40,8 +40,8 @@ begin
     process
         variable expected  : integer  := 0;
         variable err_count : integer  := 0;
-        variable seed1     : positive := 42;
-        variable seed2     : positive := 7;
+        variable seed1     : positive := 18;
+        variable seed2     : positive := 4;
         variable i, j      : integer;
 
         impure function rand_int(min_v, max_v : integer) return integer is
