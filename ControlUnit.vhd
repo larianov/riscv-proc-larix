@@ -10,6 +10,8 @@ entity ControlUnit is
         RegWrite : out std_logic;
         AluSrc : out std_logic;
         Illegal : out STD_LOGIC;
+        Branch : out STD_LOGIC;
+        ImmSrc : out std_logic_vector(1 downto 0);
         alu_control : out std_logic_vector(3 downto 0)
     );
 end entity ControlUnit;
@@ -23,6 +25,8 @@ begin
         Illegal <= '0';
         RegWrite <= '0';
         AluSrc <= '0';
+        Branch <= '0';
+        ImmSrc <= "00";
         alu_control <= (others => '0');
         if opcode = "0110011" then
             AluSrc <= '0';
@@ -133,6 +137,14 @@ begin
             else
                 Illegal <= '1';
                 end if;
+        elsif opcode = "1100011" then
+            if funct3 /= "000" then
+                Branch <= '1';
+                ImmSrc <= "10";
+                alu_control <= "1000";
+            else
+                Illegal <= '1';
+            end if;
         else
             Illegal <= '1';
         end if;
