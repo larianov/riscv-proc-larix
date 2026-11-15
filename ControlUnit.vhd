@@ -99,7 +99,6 @@ begin
                 alu_control <= "0000";
                 RegWrite <= '1';
             elsif funct3 = "001" then
-                
                 if funct7 = "0000000" then
                     alu_control <= "0001";
                     RegWrite <= '1';
