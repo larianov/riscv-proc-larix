@@ -38,5 +38,5 @@ begin
                 (others => '0');
 
     res_out <= res_init;
-    Z       <= '1' when unsigned(res_init) = 0 else '0';
+    Z       <= '1' when res_init = x"00000000" else '0';
 end architecture RTL;

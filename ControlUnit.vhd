@@ -138,6 +138,4 @@ begin
             Illegal <= '1';
         end if;
     end process asunit;
-            
-
 end architecture RTL;

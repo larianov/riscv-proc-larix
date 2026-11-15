@@ -1,2 +1,6 @@
 .sigasi
 project.sigasi
+db
+incremental_db
+output_files
+wave.ghw

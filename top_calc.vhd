@@ -16,11 +16,10 @@ architecture RTL of top_calc is
     signal read_out_second : std_logic_vector(31 downto 0) := (others => '0');
     signal write_In : std_logic_vector(31 downto 0) := (others => '0');
     signal write_en : std_logic := '0';
-    signal imm_out : std_logic_vector(31 downto 0);
-    signal AluSrc : std_logic;
-    signal alu_control : std_logic_vector(3 downto 0);
-    signal muxout : std_logic_vector(31 downto 0);
-
+    signal imm_out : std_logic_vector(31 downto 0) := (others => '0');
+    signal AluSrc : std_logic := '0';
+    signal alu_control : std_logic_vector(3 downto 0) := (others => '0');
+    signal muxout : std_logic_vector(31 downto 0) := (others => '0');
 begin
     riscvregfile_inst : entity work.riscvregfile
         port map(
