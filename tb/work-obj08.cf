@@ -1,0 +1,37 @@
+v 4
+file . "cpu_tb.vhd" "2d44ff772838b2ba816545c3dabb9981a9413cd5" "20261115195106.735":
+  entity cpu_fib_tb at 1( 0) + 0 on 33;
+  architecture sim of cpu_fib_tb at 8( 104) + 0 on 34;
+file . "../riscvregfile.vhd" "54671a5ca69bd61fe61f9ee03a1994676a0380a6" "20261115195106.735":
+  entity riscvregfile at 1( 0) + 0 on 21;
+  architecture rtl of riscvregfile at 18( 583) + 0 on 22;
+file . "../pc.vhd" "def9e5e78890915dc6d28aea6ffc29fa4190cdd3" "20261115195106.735":
+  entity pc at 1( 0) + 0 on 11;
+  architecture rtl of pc at 15( 271) + 0 on 12;
+file . "../PCTarget.vhd" "037e29d5ae63bb377ad5963a2bc79f660fcb3dbe" "20261115195106.735":
+  entity pctarget at 1( 0) + 0 on 15;
+  architecture rtl of pctarget at 13( 279) + 0 on 16;
+file . "../PCPlus4.vhd" "4c29026f09ef14f0d7f379fce098df416d693df9" "20261115195106.735":
+  entity pcplus4 at 1( 0) + 0 on 13;
+  architecture rtl of pcplus4 at 12( 222) + 0 on 14;
+file . "../Pc_mux.vhd" "6f809cb7970202e657c5b2c07dfc2c40d1064fe5" "20261115195106.735":
+  entity pc_mux at 1( 0) + 0 on 17;
+  architecture rtl of pc_mux at 14( 300) + 0 on 18;
+file . "../instruction_memory.vhd" "ea5b7590510d3a29f8d9b2e6dfae64cff76d738c" "20261115195106.735":
+  entity instruction_memory at 1( 0) + 0 on 19;
+  architecture rtl of instruction_memory at 20( 394) + 0 on 20;
+file . "../ImmGen.vhd" "4a6435c865bd8b94a145f53f4d809375cf1a3386" "20261115195106.735":
+  entity immgen at 1( 0) + 0 on 25;
+  architecture rtl of immgen at 13( 275) + 0 on 26;
+file . "../cpu.vhd" "e6d033dbaddba80ce56366af9aad201312ed429c" "20261115195106.735":
+  entity cpu at 1( 0) + 0 on 31;
+  architecture rtl of cpu at 13( 254) + 0 on 32;
+file . "../ControlUnit.vhd" "f52972393fb263456b19c61770408405a27f0d84" "20261115195106.735":
+  entity controlunit at 1( 0) + 0 on 23;
+  architecture rtl of controlunit at 20( 522) + 0 on 24;
+file . "../alu.vhd" "7d9a7b246459b304dd43210aa08b95a9d541fa86" "20261115195106.735":
+  entity alu at 1( 0) + 0 on 29;
+  architecture rtl of alu at 15( 381) + 0 on 30;
+file . "../alu_mux.vhd" "ca89978dd3582003c44a2e9204a0359d7387f7d8" "20261115195106.735":
+  entity alu_mux at 1( 0) + 0 on 27;
+  architecture rtl of alu_mux at 14( 299) + 0 on 28;

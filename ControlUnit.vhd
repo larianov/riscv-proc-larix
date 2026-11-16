@@ -138,7 +138,7 @@ begin
                 Illegal <= '1';
                 end if;
         elsif opcode = "1100011" then
-            if funct3 /= "000" then
+            if funct3 = "000" or funct3 = "001" then
                 Branch <= '1';
                 ImmSrc <= "10";
                 alu_control <= "1000";

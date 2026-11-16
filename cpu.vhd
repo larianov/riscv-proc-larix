@@ -107,6 +107,6 @@ begin
             res_out     => write_In,
             Z           => zero
         );
-    zerob <= zero and branch;
+    zerob <= (zero and branch and not instr(12)) or (not zero and branch and instr(12));
     rez <= write_In;
 end architecture RTL;
