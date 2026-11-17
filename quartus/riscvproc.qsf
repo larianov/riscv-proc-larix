@@ -54,17 +54,17 @@ set_global_assignment -name EDA_GENERATE_FUNCTIONAL_NETLIST OFF -section_id eda_
 set_global_assignment -name EDA_GENERATE_FUNCTIONAL_NETLIST OFF -section_id eda_board_design_symbol
 set_global_assignment -name EDA_GENERATE_FUNCTIONAL_NETLIST OFF -section_id eda_board_design_signal_integrity
 set_global_assignment -name EDA_GENERATE_FUNCTIONAL_NETLIST OFF -section_id eda_board_design_boundary_scan
-set_global_assignment -name VHDL_FILE instruction_memory.vhd
-set_global_assignment -name VHDL_FILE Pc_mux.vhd
-set_global_assignment -name VHDL_FILE PCTarget.vhd
-set_global_assignment -name VHDL_FILE PCPlus4.vhd
-set_global_assignment -name VHDL_FILE pc.vhd
-set_global_assignment -name VHDL_FILE cpu.vhd
-set_global_assignment -name VHDL_FILE alu.vhd
-set_global_assignment -name VHDL_FILE ImmGen.vhd
-set_global_assignment -name VHDL_FILE riscvregfile.vhd
-set_global_assignment -name VHDL_FILE ControlUnit.vhd
-set_global_assignment -name VHDL_FILE alu_mux.vhd
+set_global_assignment -name VHDL_FILE ../rtl/instruction_memory.vhd
+set_global_assignment -name VHDL_FILE ../rtl/Pc_mux.vhd
+set_global_assignment -name VHDL_FILE ../rtl/PCTarget.vhd
+set_global_assignment -name VHDL_FILE ../rtl/PCPlus4.vhd
+set_global_assignment -name VHDL_FILE ../rtl/pc.vhd
+set_global_assignment -name VHDL_FILE ../rtl/cpu.vhd
+set_global_assignment -name VHDL_FILE ../rtl/alu.vhd
+set_global_assignment -name VHDL_FILE ../rtl/ImmGen.vhd
+set_global_assignment -name VHDL_FILE ../rtl/riscvregfile.vhd
+set_global_assignment -name VHDL_FILE ../rtl/ControlUnit.vhd
+set_global_assignment -name VHDL_FILE ../rtl/alu_mux.vhd
 set_global_assignment -name POWER_PRESET_COOLING_SOLUTION "23 MM HEAT SINK WITH 200 LFPM AIRFLOW"
 set_global_assignment -name POWER_BOARD_THERMAL_MODEL "NONE (CONSERVATIVE)"
 set_global_assignment -name PARTITION_NETLIST_TYPE SOURCE -section_id Top
