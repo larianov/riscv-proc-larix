@@ -16,6 +16,10 @@ end entity cpu;
 architecture RTL of cpu is
     signal instr : std_logic_vector(31 downto 0) := (others => '0');
     signal PC_s : std_logic_vector(31 downto 0) := (others => '0');
+    signal RD : std_logic_vector(31 downto 0);
+    signal WE : std_logic;
+    signal WD : std_logic_vector(31 downto 0);
+    
     
 begin
     instruction_memory_inst : entity work.instruction_memory
@@ -34,8 +38,21 @@ begin
             instr   => instr,
             PC      => PC_s,
             Illegal => Illegal,
-            rez     => rez
+            rez     => rez,
+            RD      => RD,
+            Mem_Write => WE,
+            WD        => WD
         );
-    
+    memory_data_inst : entity work.memory_data
+        generic map(
+            size => 32
+        )
+        port map(
+            clk     => clk,
+            address => rez,
+            wD      => wD,
+            WE      => WE,
+            RD      => RD
+        );
     PC <= PC_s;
 end architecture RTL;

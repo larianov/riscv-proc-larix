@@ -13,12 +13,16 @@ entity DataPath is
         RegWrite : in STD_LOGIC;
         Zero : out STD_LOGIC;
         REZ : out std_logic_vector(31 downto 0);
-        PC : out std_logic_vector(31 downto 0)
+        PC : out std_logic_vector(31 downto 0);
+        RD : in std_logic_vector(31 downto 0);
+        Result_Src : in std_logic_vector(1 downto 0);
+        WD : out std_logic_vector(31 downto 0)
     );
 end entity DataPath;
 
 architecture RTL of DataPath is
     signal Write_Input : std_logic_vector(31 downto 0);
+    signal Alu_Result : std_logic_vector(31 downto 0);
     signal A_input : std_logic_vector(31 downto 0);
     signal B_input : std_logic_vector(31 downto 0);
     signal ImmOut : std_logic_vector(31 downto 0) := (others => '0');
@@ -27,8 +31,6 @@ architecture RTL of DataPath is
     signal PC_NEXT_OFFSET : std_logic_vector(31 downto 0) := (others => '0');
     signal B_input_real : std_logic_vector(31 downto 0);
     signal PC_Next_R : std_logic_vector(31 downto 0) := (others => '0');
-    
-    
 begin
     pc_inst : entity work.pc
     port map(
@@ -84,10 +86,19 @@ begin
             A_input     => A_input,
             B_input     => B_input_real,
             alu_control => alu_control,
-            res_out     => Write_Input,
+            res_out     => Alu_Result,
             Z           => Zero
         );
+    result_mux_inst : entity work.result_mux
+        port map(
+            Result_Src => Result_Src,
+            RD         => RD,
+            ALU_Res    => Alu_Result,
+            PC_4       => PC_NEXT_4,
+            Mux_Res    => Write_Input
+        );
+    WD <= B_input;
     PC <= PC_NOW;
-    REZ <= Write_Input;
+    REZ <= Alu_Result;
 end architecture RTL;
 

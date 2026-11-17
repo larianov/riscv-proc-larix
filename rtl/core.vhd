@@ -9,7 +9,10 @@ entity core is
         instr : in std_logic_vector(31 downto 0);
         PC : out std_logic_vector(31 downto 0);
         Illegal : out std_logic;
-        rez : out std_logic_vector(31 downto 0)
+        Mem_Write : out STD_LOGIC;
+        rez : out std_logic_vector(31 downto 0);
+        RD : in std_logic_vector(31 downto 0);
+        WD : out std_logic_vector(31 downto 0)
     );
 end entity core;
 architecture RTL of core is
@@ -19,6 +22,8 @@ architecture RTL of core is
     signal ImmSrc : std_logic_vector(1 downto 0) := (others => '0');
     signal alu_control : std_logic_vector(3 downto 0);
     signal PC_src : std_logic := '0';
+    signal Result_Src : std_logic_vector(1 downto 0);
+    
         
 begin
     DataPath_inst : entity work.DataPath
@@ -33,7 +38,10 @@ begin
             RegWrite    => RegWrite,
             Zero        => Zero,
             REZ         => rez,
-            PC          => PC
+            PC          => PC,
+            RD          => RD,
+            Result_Src  => Result_Src,
+            WD          => WD
         );
     controlblock_inst : entity work.controlblock
         port map(
@@ -44,7 +52,9 @@ begin
             AluSrc      => AluSrc,
             ImmSrc      => ImmSrc,
             alu_control => alu_control,
-            PCsrc       => PC_src
+            PCsrc       => PC_src,
+            Result_Src  => Result_Src,
+            Mem_Write   => Mem_Write
         );
         
 end architecture RTL;

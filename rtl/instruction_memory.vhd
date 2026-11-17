@@ -7,7 +7,7 @@ use ieee.std_logic_textio.all;
 
 entity instruction_memory is
     generic(
-        file_S : string := "program.hex";
+        file_S : string := "hex.hex";
         size : positive := 32
     );
     port(
@@ -38,6 +38,7 @@ architecture RTL of instruction_memory is
             end if;
         end loop;
         file_close(f);
+        report "ROM loaded, words = " & integer'image(line_c);
         return loc_arr;
     end function ParseFile;
 

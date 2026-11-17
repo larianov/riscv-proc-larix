@@ -11,7 +11,9 @@ entity controlblock is
         AluSrc : out std_logic;
         ImmSrc : out std_logic_vector(1 downto 0);
         alu_control : out std_logic_vector(3 downto 0);
-        PCsrc : out STD_LOGIC
+        PCsrc : out STD_LOGIC;
+        Result_Src : out std_logic_vector(1 downto 0);
+        Mem_Write : out std_logic
     );
 end entity controlblock;
 
@@ -29,8 +31,10 @@ begin
             Illegal     => Illegal,
             Branch      => Branch,
             ImmSrc      => ImmSrc,
-            alu_control => alu_control
+            alu_control => alu_control,
+            Mem_Write => Mem_Write,
+            Result_Src => Result_Src
         );
-    PCsrc <= (zero and branch and not instr(12)) or (not zero and branch and instr(12));
+    PCsrc <= branch and (zero xor instr(12) xor instr(14));
 end architecture RTL;
 

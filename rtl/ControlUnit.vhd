@@ -12,6 +12,8 @@ entity ControlUnit is
         Illegal : out STD_LOGIC;
         Branch : out STD_LOGIC;
         ImmSrc : out std_logic_vector(1 downto 0);
+        Mem_Write : out STD_LOGIC;
+        Result_Src : out std_logic_vector(1 downto 0) := "01";
         alu_control : out std_logic_vector(3 downto 0)
     );
 end entity ControlUnit;
@@ -27,6 +29,8 @@ begin
         AluSrc <= '0';
         Branch <= '0';
         ImmSrc <= "00";
+        Mem_Write <= '0';
+        Result_Src <= (others => '0');
         alu_control <= (others => '0');
         if opcode = "0110011" then
             AluSrc <= '0';
@@ -142,6 +146,14 @@ begin
                 Branch <= '1';
                 ImmSrc <= "10";
                 alu_control <= "1000";
+            elsif funct3 = "100" or funct3 = "101" then
+                Branch <= '1';
+                ImmSrc <= "10";
+                alu_control <= "0010";
+            elsif funct3 = "110" or funct3 = "111" then
+                Branch <= '1';
+                ImmSrc <= "10";
+                alu_control <= "0011";
             else
                 Illegal <= '1';
             end if;
