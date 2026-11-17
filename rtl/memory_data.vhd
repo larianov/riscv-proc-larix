@@ -10,7 +10,7 @@ entity memory_data is
         clk : in std_logic;
         address : in std_logic_vector(31 downto 0);
         wD : in std_logic_vector(31 downto 0);
-        WE : in std_logic;
+        WE : in std_logic_vector(3 downto 0);
         RD : out std_logic_vector(31 downto 0)
     );
 end entity memory_data;
@@ -21,11 +21,26 @@ architecture RTL of memory_data is
     signal index : integer range 0 to size-1 := 0;
 begin
     process(clk)
+        variable temp_we : std_logic_vector(31 downto 0) := (others => '0');
+        
     begin
         if rising_edge(clk) then
-            if WE = '1' then
-                mem_array(index) <= wD;
-            end if;
+            if we /= "0000" then
+                temp_we := mem_array(index);
+                if WE(0) = '1' then
+                    temp_we(7 downto 0) := wD(7 downto 0);
+                end if;
+                if WE(1) = '1' then
+                    temp_we(15 downto 8) := wD(15 downto 8);
+                end if;       
+                if WE(2) = '1' then
+                    temp_we(23 downto 16) := wD(23 downto 16);
+                end if;
+                if WE(3) = '1' then
+                    temp_we(31 downto 24) := wD(31 downto 24);
+                end if;
+                mem_array(index) <= temp_we;
+            end if;                
         end if;
     end process;
     index <= TO_INTEGER(SHIFT_RIGHT((UNSIGNED(address)), 2)) mod size;

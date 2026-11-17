@@ -16,7 +16,7 @@ begin
         port map(clk => clk, 
             rst => rst,
             Illegal => Illegal, 
-            rez => rez,
+            RezOUT => rez,
             PC => PC);
 
     clk <= not clk after 5 ns;

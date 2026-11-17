@@ -4,7 +4,8 @@ use ieee.numeric_std.all;
 use ieee.math_real.all;
 
 -- Runs a random program (R-type, I-type, forward beq/bne) on the core and compares every cycle
--- with a software model of RV32I: PC, ALU result (rez) and the register contents.
+-- with a software model of RV32I: PC, ALU result (rez), the register contents and the store
+-- interface (WE byte enables / WD data lanes).
 entity core_tb is
 end entity;
 
@@ -18,6 +19,8 @@ architecture sim of core_tb is
     signal PC      : std_logic_vector(31 downto 0);
     signal Illegal : std_logic;
     signal rez     : std_logic_vector(31 downto 0);
+    signal WE      : std_logic_vector(3 downto 0);
+    signal WD      : std_logic_vector(31 downto 0);
 
     signal rom : rom_t := (others => x"00000013"); -- nop
 
@@ -33,6 +36,14 @@ architecture sim of core_tb is
     begin
         return std_logic_vector(to_signed(imm, 12)) & std_logic_vector(to_unsigned(rs1, 5)) &
                std_logic_vector(to_unsigned(f3, 3)) & std_logic_vector(to_unsigned(rd, 5)) & "0010011";
+    end function;
+
+    function enc_s(imm, rs2, rs1, f3 : integer) return std_logic_vector is
+        variable o : std_logic_vector(11 downto 0) := std_logic_vector(to_signed(imm, 12));
+    begin
+        return o(11 downto 5) & std_logic_vector(to_unsigned(rs2, 5)) &
+               std_logic_vector(to_unsigned(rs1, 5)) & std_logic_vector(to_unsigned(f3, 3)) &
+               o(4 downto 0) & "0100011";
     end function;
 
     function enc_b(off, rs2, rs1, f3 : integer) return std_logic_vector is
@@ -76,7 +87,8 @@ begin
              else x"00000013";
 
     dut : entity work.core
-        port map(rst => rst, clk => clk, instr => instr, PC => PC, Illegal => Illegal, rez => rez);
+        port map(rst => rst, clk => clk, instr => instr, PC => PC, Illegal => Illegal, rez => rez,
+                 ReadData => x"00000000", WD => WD, WE => WE);
 
     ---------------------------------------------------------------- build the program
     gen : process
@@ -105,7 +117,7 @@ begin
         end loop;
 
         for n in 7 to ROM_SIZE - 20 loop
-            kind := rnd(10);
+            kind := rnd(12);
             if kind < 5 then      -- R-type
                 sel := rnd(10);
                 p(n) := enc_r(R_OPS(sel)(1), rnd(8), rnd(8), R_OPS(sel)(0), rnd(8));
@@ -121,6 +133,8 @@ begin
                 else
                     p(n) := enc_i(rnd(4096) - 2048, rnd(8), f3, rnd(8));
                 end if;
+            elsif kind < 11 then  -- store sb / sh / sw
+                p(n) := enc_s(rnd(4096) - 2048, rnd(8), rnd(8), rnd(3));
             else                  -- forward branch skipping 1 or 2 instructions
                 p(n) := enc_b(8 + 4 * rnd(2), rnd(8), rnd(8), rnd(2));      -- beq / bne
             end if;
@@ -140,6 +154,9 @@ begin
         variable rd, rs1, rs2 : integer;
         variable f3 : std_logic_vector(2 downto 0);
         variable alt, taken : boolean;
+        variable exp_we : std_logic_vector(3 downto 0);
+        variable width, off : integer;
+        variable stores : integer := 0;
         variable cycles, branches_taken, branches_not : integer := 0;
     begin
         wait for 1 ns;                 -- let gen process fill the rom
@@ -172,6 +189,26 @@ begin
                 exp_rez := alu_model(f3, alt, a, b);
                 if rd /= 0 then regs(rd) := exp_rez; end if;
                 pc_m := pc_m + 4;
+            elsif w(6 downto 0) = "0100011" then       -- store: ALU computes rs1 + imm_s, regs unchanged
+                b := (31 downto 12 => w(31)) & w(31 downto 25) & w(11 downto 7);
+                exp_rez := std_logic_vector(unsigned(a) + unsigned(b));
+                width := 2 ** to_integer(unsigned(f3));
+                off := to_integer(unsigned(exp_rez(1 downto 0)));
+                exp_we := (others => '0');
+                if off mod width = 0 then
+                    for i in 0 to width - 1 loop exp_we(off + i) := '1'; end loop;
+                end if;
+                assert WE = exp_we
+                    report "WE wrong at PC " & integer'image(pc_m) & ": got " & to_string(WE) &
+                           " expected " & to_string(exp_we) severity failure;
+                for i in 0 to 3 loop    -- every enabled lane must carry the right byte of rs2
+                    if exp_we(i) = '1' then
+                        assert WD(8 * i + 7 downto 8 * i) = regs(rs2)(8 * (i - off) + 7 downto 8 * (i - off))
+                            report "WD lane " & integer'image(i) & " wrong at PC " & integer'image(pc_m) severity failure;
+                    end if;
+                end loop;
+                stores := stores + 1;
+                pc_m := pc_m + 4;
             else                                       -- branch: ALU computes rs1 - rs2
                 exp_rez := std_logic_vector(unsigned(a) - unsigned(regs(rs2)));
                 taken := (exp_rez = x"00000000") = (f3 = "000");
@@ -185,6 +222,9 @@ begin
                 end if;
             end if;
 
+            if w(6 downto 0) /= "0100011" then
+                assert WE = "0000" report "WE must be 0 for non-store at PC " & integer'image(pc_m) severity failure;
+            end if;
             assert rez = exp_rez
                 report "rez wrong at PC " & integer'image(to_integer(unsigned(PC))) & " instr " & to_hstring(w) &
                        ": got " & to_hstring(rez) & " expected " & to_hstring(exp_rez) severity failure;
@@ -194,6 +234,7 @@ begin
 
         report "core_tb done: " & integer'image(cycles) & " cycles, branches taken " &
                integer'image(branches_taken) & " / not taken " & integer'image(branches_not);
+        assert stores > 20 report "program has too few stores" severity error;
         assert branches_taken > 20 and branches_not > 20 report "program has too few branches" severity error;
 
         -- halt loop must stay put

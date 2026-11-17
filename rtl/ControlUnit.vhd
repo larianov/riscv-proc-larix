@@ -157,6 +157,15 @@ begin
             else
                 Illegal <= '1';
             end if;
+        elsif opcode = "0100011" then
+            if funct3(2) /= '1'  and funct3 /= "011" then
+                Mem_Write <= '1';
+                alu_control <= "0000";
+                AluSrc <= '1';
+                ImmSrc <= "01";
+            else
+                Illegal <= '1';
+            end if;
         else
             Illegal <= '1';
         end if;
