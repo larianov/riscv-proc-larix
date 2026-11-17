@@ -16,7 +16,7 @@ architecture sim of cpu_fib_tb is
     constant FIB20    : integer := 6765;
 begin
 
-    dut : entity work.cpu
+    dut : entity work.core
         port map(rst => rst, clk => clk, Illegal => Illegal, rez => rez);
 
     clk <= not clk after 5 ns;

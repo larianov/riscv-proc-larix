@@ -7,7 +7,7 @@ entity pc is
         clk : in std_logic;
         rst : in std_logic;
         PCNext : in std_logic_vector(31 downto 0);
-        PC : out std_logic_vector(31 downto 0)
+        PC_REG : out std_logic_vector(31 downto 0)
     );
 end entity pc;
 
@@ -18,9 +18,9 @@ begin
     begin
         if rising_edge(clk) then
             if rst = '1' then
-                PC <= (others => '0');
+                PC_REG <= (others => '0');
             else
-                PC <= PCNext;
+                PC_REG <= PCNext;
             end if;
         end if;
     end process;
