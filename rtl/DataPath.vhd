@@ -16,7 +16,8 @@ entity DataPath is
         PC : out std_logic_vector(31 downto 0);
         ReadData : in std_logic_vector(31 downto 0);
         Result_Src : in std_logic_vector(1 downto 0);
-        WD : out std_logic_vector(31 downto 0)
+        WD : out std_logic_vector(31 downto 0);
+        JalrReg : in std_logic
     );
 end entity DataPath;
 
@@ -31,6 +32,10 @@ architecture RTL of DataPath is
     signal PC_NEXT_OFFSET : std_logic_vector(31 downto 0) := (others => '0');
     signal B_input_real : std_logic_vector(31 downto 0);
     signal PC_Next_R : std_logic_vector(31 downto 0) := (others => '0');
+    signal PCtarget_IN : std_logic_vector(31 downto 0) := (others => '0');
+    signal PC_NEXT_OFFSET_ZERO : std_logic_vector(31 downto 0);
+    
+
 begin
     pc_inst : entity work.pc
     port map(
@@ -44,16 +49,31 @@ begin
             PC   => PC_NOW,
             PC_O => PC_NEXT_4
         );
+
+    MuxJalr_inst : entity work.MuxJalr
+        port map(
+            PC_NOW      => PC_NOW,
+            RD1         => A_input,
+            JalrReg     => JalrReg,
+            PCtarget_IN => PCtarget_IN
+        );
+    
     PCTarget_inst : entity work.PCTarget
         port map(
-            PC       => PC_NOW,
+            PC       => PCtarget_IN,
             offset   => ImmOut,
             PCOFFSET => PC_NEXT_OFFSET
         );
+    ZeroGen_inst : entity work.ZeroGen
+        port map(
+            INP  => PC_NEXT_OFFSET,
+            OUTP => PC_NEXT_OFFSET_ZERO
+        );
+    
     Pc_mux_inst : entity work.Pc_mux
         port map(
             PCPlus4 => PC_NEXT_4,
-            PCL     => PC_NEXT_OFFSET,
+            PCL     => PC_NEXT_OFFSET_ZERO,
             S       => PC_Src,
             PCOUT   => PC_Next_R
         );

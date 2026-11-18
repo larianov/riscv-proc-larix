@@ -15,6 +15,7 @@ architecture sim of datapath_tb is
     signal alu_control : std_logic_vector(3 downto 0) := "0000";
     signal RegWrite    : std_logic := '0';
     signal Zero        : std_logic;
+    signal JalrReg     : std_logic := '0';
     signal REZ, PC, WD : std_logic_vector(31 downto 0);
 begin
     clk <= not clk after 5 ns;
@@ -23,7 +24,7 @@ begin
         port map(clk => clk, rst => rst, PC_Src => PC_Src, ImmSrc => ImmSrc, instr => instr,
                  AluSrc => AluSrc, alu_control => alu_control, RegWrite => RegWrite,
                  Zero => Zero, REZ => REZ, PC => PC,
-                 ReadData => x"00000000", Result_Src => "00", WD => WD);
+                 ReadData => x"00000000", Result_Src => "00", WD => WD, JalrReg => JalrReg);
 
     process
     begin
@@ -58,6 +59,16 @@ begin
         instr <= x"00008463"; ImmSrc <= "10"; PC_Src <= '1';  -- beq x1, x0, +8
         wait until falling_edge(clk);
         assert PC = x"00000014" report "branch target wrong" severity error;
+
+        -- jal-style jump: PC (now 0x14) + offset 8 = 0x1C
+        instr <= x"008000EF"; ImmSrc <= "11"; PC_Src <= '1';
+        wait until falling_edge(clk);
+        assert PC = x"0000001C" report "jal target wrong" severity error;
+
+        -- jalr-style jump: target = (x1 + imm) with bit 0 cleared. x1 = 5, imm = 4 -> 9 -> 8
+        instr <= x"00408167"; ImmSrc <= "00"; JalrReg <= '1'; AluSrc <= '1';
+        wait until falling_edge(clk);
+        assert PC = x"00000008" report "jalr target wrong (bit 0 must be cleared)" severity error;
 
         report "datapath_tb done";
         std.env.finish;

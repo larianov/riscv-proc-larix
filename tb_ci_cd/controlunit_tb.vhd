@@ -11,7 +11,7 @@ architecture sim of controlunit_tb is
     signal opcode : std_logic_vector(6 downto 0) := (others => '0');
     signal funct3 : std_logic_vector(2 downto 0) := (others => '0');
     signal funct7 : std_logic_vector(6 downto 0) := (others => '0');
-    signal RegWrite, AluSrc, Illegal, Branch, Mem_Write : std_logic;
+    signal RegWrite, AluSrc, Illegal, Branch, Mem_Write, JalrReg, Jump : std_logic;
     signal ImmSrc : std_logic_vector(1 downto 0);
     signal alu_control : std_logic_vector(3 downto 0);
     signal Result_Src : std_logic_vector(1 downto 0);
@@ -19,13 +19,15 @@ begin
     dut : entity work.ControlUnit
         port map(opcode => opcode, funct3 => funct3, funct7 => funct7, RegWrite => RegWrite,
                  AluSrc => AluSrc, Illegal => Illegal, Branch => Branch, ImmSrc => ImmSrc,
-                 alu_control => alu_control, Mem_Write => Mem_Write, Result_Src => Result_Src);
+                 alu_control => alu_control, Mem_Write => Mem_Write, Result_Src => Result_Src,
+                 JalrReg => JalrReg, Jump => Jump);
 
     process
         variable f3, f7, op : integer;
         variable exp_illegal : boolean;
         variable exp_ctl : std_logic_vector(3 downto 0);
-        variable exp_branch, exp_alusrc, exp_regwrite, exp_memwrite : std_logic;
+        variable exp_branch, exp_alusrc, exp_regwrite, exp_memwrite, exp_jump, exp_jalr : std_logic;
+        variable check_alu : boolean;
         variable exp_rsrc : std_logic_vector(1 downto 0);
         variable errors : integer := 0;
 
@@ -53,6 +55,7 @@ begin
 
                     exp_illegal := true; exp_ctl := "0000"; exp_branch := '0';
                     exp_alusrc := '0'; exp_regwrite := '0'; exp_memwrite := '0'; exp_rsrc := "00";
+                    exp_jump := '0'; exp_jalr := '0'; check_alu := true;
 
                     if op = 51 then -- R-type
                         exp_alusrc := '0';
@@ -92,6 +95,14 @@ begin
                             exp_illegal := false; exp_ctl := "0000"; exp_alusrc := '1'; exp_regwrite := '1';
                             exp_rsrc := "01";
                         end if;
+                    elsif op = 111 then -- jal: rd = PC+4, PC = PC + J-imm (ALU unused)
+                        exp_illegal := false; exp_jump := '1'; exp_regwrite := '1'; exp_rsrc := "10";
+                        check_alu := false;
+                    elsif op = 103 then -- jalr (funct3 must be 0): rd = PC+4, PC = (rs1 + I-imm) & ~1
+                        if f3 = 0 then
+                            exp_illegal := false; exp_jump := '1'; exp_jalr := '1'; exp_regwrite := '1';
+                            exp_rsrc := "10"; check_alu := false;
+                        end if;
                     end if;
 
                     wait for 1 ns;
@@ -106,8 +117,12 @@ begin
                         report "RegWrite/Branch/Mem_Write wrong: op=" & integer'image(op) & " f3=" & integer'image(f3) &
                                " f7=" & integer'image(f7) severity error;
                     end if;
+                    if Jump /= exp_jump or JalrReg /= exp_jalr then
+                        errors := errors + 1;
+                        report "Jump/JalrReg wrong: op=" & integer'image(op) & " f3=" & integer'image(f3) severity error;
+                    end if;
                     if not exp_illegal then -- other outputs are don't-care for illegal instructions
-                        if alu_control /= exp_ctl or AluSrc /= exp_alusrc then
+                        if check_alu and (alu_control /= exp_ctl or AluSrc /= exp_alusrc) then
                             errors := errors + 1;
                             report "alu_control/AluSrc wrong: op=" & integer'image(op) & " f3=" & integer'image(f3) &
                                    " f7=" & integer'image(f7) severity error;
@@ -124,7 +139,11 @@ begin
                             errors := errors + 1;
                             report "ImmSrc must be S-type for stores" severity error;
                         end if;
-                        if exp_branch = '0' and exp_memwrite = '0' and ImmSrc /= "00" then
+                        if op = 111 and ImmSrc /= "11" then
+                            errors := errors + 1;
+                            report "ImmSrc must be J-type for jal" severity error;
+                        end if;
+                        if exp_branch = '0' and exp_memwrite = '0' and op /= 111 and ImmSrc /= "00" then
                             errors := errors + 1;
                             report "ImmSrc must be I-type for ALU instructions" severity error;
                         end if;

@@ -13,12 +13,15 @@ entity controlblock is
         alu_control : out std_logic_vector(3 downto 0);
         PCsrc : out STD_LOGIC;
         Result_Src : out std_logic_vector(1 downto 0);
-        Mem_Write : out std_logic
+        Mem_Write : out std_logic;
+        JalrReg : out std_logic
     );
 end entity controlblock;
 
 architecture RTL of controlblock is
     signal Branch : std_logic := '0';
+    signal Jump : std_logic;
+    
     
 begin
     ControlUnit_inst : entity work.ControlUnit
@@ -33,8 +36,10 @@ begin
             ImmSrc      => ImmSrc,
             alu_control => alu_control,
             Mem_Write => Mem_Write,
-            Result_Src => Result_Src
+            Result_Src => Result_Src,
+            JalrReg     => JalrReg,
+            Jump        => Jump
         );
-    PCsrc <= branch and (zero xor instr(12) xor instr(14));
+    PCsrc <= (branch and (zero xor instr(12) xor instr(14))) or Jump;
 end architecture RTL;
 

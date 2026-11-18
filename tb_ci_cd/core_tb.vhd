@@ -62,6 +62,19 @@ architecture sim of core_tb is
                std_logic_vector(to_unsigned(f3, 3)) & std_logic_vector(to_unsigned(rd, 5)) & "0000011";
     end function;
 
+    function enc_j(off, rd : integer) return std_logic_vector is
+        variable o : std_logic_vector(20 downto 0) := std_logic_vector(to_signed(off, 21));
+    begin
+        return o(20) & o(10 downto 1) & o(11) & o(19 downto 12) &
+               std_logic_vector(to_unsigned(rd, 5)) & "1101111";
+    end function;
+
+    function enc_jalr(imm, rs1, rd : integer) return std_logic_vector is
+    begin
+        return std_logic_vector(to_signed(imm, 12)) & std_logic_vector(to_unsigned(rs1, 5)) &
+               "000" & std_logic_vector(to_unsigned(rd, 5)) & "1100111";
+    end function;
+
     -- memory contents: the word at a (word aligned) address
     function mem_word(addr : std_logic_vector(31 downto 0)) return std_logic_vector is
         variable a : unsigned(31 downto 0) := unsigned(addr(31 downto 2)) & "00";
@@ -150,7 +163,7 @@ begin
         end loop;
 
         for n in 7 to ROM_SIZE - 20 loop
-            kind := rnd(12);
+            kind := rnd(14);
             if kind < 5 then      -- R-type
                 sel := rnd(10);
                 p(n) := enc_r(R_OPS(sel)(1), rnd(8), rnd(8), R_OPS(sel)(0), rnd(8));
@@ -179,8 +192,12 @@ begin
                     when others => f3 := 5; lw := 1;
                 end case;
                 p(n) := enc_l(((rnd(4096) - 2048) / (lw + 1)) * (lw + 1), 0, f3, rnd(8));
-            else                  -- forward branch skipping 1 or 2 instructions
+            elsif kind < 12 then  -- forward branch skipping 1 or 2 instructions
                 p(n) := enc_b(8 + 4 * rnd(2), rnd(8), rnd(8), rnd(2));      -- beq / bne
+            elsif kind < 13 or n > 500 then -- jal skipping 1 or 2 instructions, link into x0..x7
+                p(n) := enc_j(8 + 4 * rnd(2), rnd(8));
+            else                  -- jalr x0-based: absolute target imm, odd imm exercises the bit-0 clear
+                p(n) := enc_jalr(4 * (n + 2 + rnd(2)) + 1, 0, rnd(8));
             end if;
         end loop;
         p(ROM_SIZE - 1) := x"00000063"; -- beq x0,x0,0  : halt
@@ -200,7 +217,8 @@ begin
         variable alt, taken : boolean;
         variable exp_we : std_logic_vector(3 downto 0);
         variable width, off : integer;
-        variable stores, loads : integer := 0;
+        variable stores, loads, jumps : integer := 0;
+        variable tgt : std_logic_vector(31 downto 0);
         variable cycles, branches_taken, branches_not : integer := 0;
     begin
         wait for 1 ns;                 -- let gen process fill the rom
@@ -261,6 +279,19 @@ begin
                 end if;
                 loads := loads + 1;
                 pc_m := pc_m + 4;
+            elsif w(6 downto 0) = "1101111" then       -- jal: rd = pc+4, pc += J-imm; ALU does rs1 + rs2
+                exp_rez := std_logic_vector(unsigned(a) + unsigned(regs(rs2)));
+                if rd /= 0 then regs(rd) := std_logic_vector(to_unsigned(pc_m + 4, 32)); end if;
+                b := (31 downto 20 => w(31)) & w(19 downto 12) & w(20) & w(30 downto 21) & '0';
+                pc_m := pc_m + to_integer(signed(b));
+                jumps := jumps + 1;
+            elsif w(6 downto 0) = "1100111" then       -- jalr: rd = pc+4, pc = (rs1 + I-imm) & ~1
+                exp_rez := std_logic_vector(unsigned(a) + unsigned(regs(rs2)));
+                b := (31 downto 12 => w(31)) & w(31 downto 20);
+                if rd /= 0 then regs(rd) := std_logic_vector(to_unsigned(pc_m + 4, 32)); end if;
+                tgt := std_logic_vector(unsigned(a) + unsigned(b));
+                pc_m := to_integer(unsigned(tgt(31 downto 1) & '0'));
+                jumps := jumps + 1;
             else                                       -- branch: ALU computes rs1 - rs2
                 exp_rez := std_logic_vector(unsigned(a) - unsigned(regs(rs2)));
                 taken := (exp_rez = x"00000000") = (f3 = "000");
@@ -288,6 +319,7 @@ begin
                integer'image(branches_taken) & " / not taken " & integer'image(branches_not);
         assert loads > 20 report "program has too few loads" severity error;
         assert stores > 20 report "program has too few stores" severity error;
+        assert jumps > 20 report "program has too few jumps" severity error;
         assert branches_taken > 20 and branches_not > 20 report "program has too few branches" severity error;
 
         -- halt loop must stay put

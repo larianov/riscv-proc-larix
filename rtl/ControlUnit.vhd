@@ -14,7 +14,9 @@ entity ControlUnit is
         ImmSrc : out std_logic_vector(1 downto 0);
         Mem_Write : out STD_LOGIC;
         Result_Src : out std_logic_vector(1 downto 0) := "01";
-        alu_control : out std_logic_vector(3 downto 0)
+        alu_control : out std_logic_vector(3 downto 0);
+        JalrReg : out std_logic;
+        Jump : out std_logic
     );
 end entity ControlUnit;
 
@@ -26,7 +28,9 @@ begin
     begin
         Illegal <= '0';
         RegWrite <= '0';
+        JalrReg <= '0';
         AluSrc <= '0';
+        Jump <= '0';
         Branch <= '0';
         ImmSrc <= "00";
         Mem_Write <= '0';
@@ -173,6 +177,20 @@ begin
                 AluSrc <= '1';
                 alu_control <= "0000";
                 Result_Src <= "01";
+            else
+                Illegal <= '1';
+            end if;
+        elsif opcode = "1101111" then
+            Jump <= '1';
+            Result_Src <= "10";
+            RegWrite <= '1';
+            ImmSrc <= "11";
+        elsif opcode = "1100111" then
+            if funct3 = "000" then
+                JalrReg <= '1';
+                Jump <= '1';
+                Result_Src <= "10";
+                RegWrite <= '1';
             else
                 Illegal <= '1';
             end if;

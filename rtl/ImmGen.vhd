@@ -16,6 +16,6 @@ begin
     imm_out <= (31 downto 12 => (imm(31))) & (imm(31 downto 20)) when imm_src = "00" else 
                (31 downto 13 => (imm(31))) & (imm(31)) & imm(7) & imm(30 downto 25) & imm(11 downto 8) & '0' when imm_src = "10" else
                (31 downto 12 => (imm(31))) & (imm(31 downto 25)) & (imm(11 downto 7)) when imm_src = "01" else
-               (others => '0');    
+               (31 downto 20 => (imm(31))) & (imm(19 downto 12) & imm(20) & imm(30 downto 21)) & '0';    
 end architecture RTL;
 

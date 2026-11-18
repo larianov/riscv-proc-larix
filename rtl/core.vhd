@@ -27,6 +27,7 @@ architecture RTL of core is
     signal WD_Temp : std_logic_vector(31 downto 0);
     signal temp_res: std_logic_vector(31 downto 0) := (others => '0');
     signal READDATA : std_logic_vector(31 downto 0);
+    signal JalrReg : std_logic;
     
         
 begin
@@ -45,7 +46,8 @@ begin
             PC          => PC,
             ReadData    => ReadData,
             Result_Src  => Result_Src,
-            WD          => WD_Temp
+            WD          => WD_Temp,
+            JalrReg     => JalrReg
         );
     controlblock_inst : entity work.controlblock
         port map(
@@ -58,7 +60,8 @@ begin
             alu_control => alu_control,
             PCsrc       => PC_src,
             Result_Src  => Result_Src,
-            Mem_Write   => Mem_Write
+            Mem_Write   => Mem_Write,
+            JalrReg     => JalrReg
         );
     WriteBlock_inst : entity work.WriteBlock
         port map(
