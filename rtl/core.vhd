@@ -10,7 +10,7 @@ entity core is
         PC : out std_logic_vector(31 downto 0);
         Illegal : out std_logic;
         rez : out std_logic_vector(31 downto 0);
-        ReadData : in std_logic_vector(31 downto 0);
+        OUT_OF_MEMORY_DATA : in std_logic_vector(31 downto 0);
         WD : out std_logic_vector(31 downto 0);
         WE : out std_Logic_vector(3 downto 0)
     );
@@ -26,6 +26,7 @@ architecture RTL of core is
     signal Result_Src : std_logic_vector(1 downto 0);
     signal WD_Temp : std_logic_vector(31 downto 0);
     signal temp_res: std_logic_vector(31 downto 0) := (others => '0');
+    signal READDATA : std_logic_vector(31 downto 0);
     
         
 begin
@@ -68,5 +69,14 @@ begin
             WE          => WE,
             wD          => WD
         );
+
+    ReadBlock_inst : entity work.ReadBlock
+        port map(
+            Memory_Data => OUT_OF_MEMORY_DATA,
+            addr_2_bits => temp_res(1 downto 0),
+            funct3      => instr(14 downto 12),
+            ReadData    => READDATA
+        );
+    
     rez <= temp_res;
 end architecture RTL;

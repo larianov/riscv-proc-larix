@@ -166,6 +166,16 @@ begin
             else
                 Illegal <= '1';
             end if;
+        elsif opcode = "0000011" then
+            if funct3 = "000" or funct3 = "001" or funct3 = "100" or funct3 = "101" or funct3 = "010" then
+                RegWrite <= '1';
+                ImmSrc <= "00";
+                AluSrc <= '1';
+                alu_control <= "0000";
+                Result_Src <= "01";
+            else
+                Illegal <= '1';
+            end if;
         else
             Illegal <= '1';
         end if;

@@ -40,7 +40,7 @@ begin
             PC      => PC_s,
             Illegal => Illegal,
             rez     => rez,
-            ReadData=> ReadData,
+            OUT_OF_MEMORY_DATA => ReadData,
             WD      => WD,
             WE      => WE    
         );
