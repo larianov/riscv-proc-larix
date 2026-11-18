@@ -19,7 +19,7 @@ begin
         variable r  : real;
         variable hi : std_logic_vector(15 downto 0);
         variable w  : std_logic_vector(31 downto 0);
-        variable exp_i, exp_b : std_logic_vector(31 downto 0);
+        variable exp_i, exp_b, exp_s : std_logic_vector(31 downto 0);
     begin
         for k in 0 to 20000 loop
             uniform(s1, s2, r);
@@ -32,13 +32,15 @@ begin
             exp_i := (31 downto 12 => w(31)) & w(31 downto 20);
             exp_b := (31 downto 13 => w(31)) & w(31) & w(7) & w(30 downto 25) & w(11 downto 8) & '0';
 
+            exp_s := (31 downto 12 => w(31)) & w(31 downto 25) & w(11 downto 7);
+
             imm <= w;
             imm_src <= "00"; wait for 1 ns;
             assert imm_out = exp_i report "I-immediate wrong for " & to_hstring(w) severity error;
             imm_src <= "10"; wait for 1 ns;
             assert imm_out = exp_b report "B-immediate wrong for " & to_hstring(w) severity error;
             imm_src <= "01"; wait for 1 ns;
-            assert imm_out = x"00000000" report "unused imm_src 01 must give 0" severity error;
+            assert imm_out = exp_s report "S-immediate wrong for " & to_hstring(w) severity error;
             imm_src <= "11"; wait for 1 ns;
             assert imm_out = x"00000000" report "unused imm_src 11 must give 0" severity error;
         end loop;

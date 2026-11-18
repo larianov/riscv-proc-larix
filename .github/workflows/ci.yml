@@ -17,7 +17,7 @@ jobs:
       - name: Fibonacci program on full CPU (tb_uni)
         working-directory: tb_uni
         run: |
-          for f in ControlUnit ImmGen PCPlus4 PCTarget Pc_mux alu alu_mux pc riscvregfile instruction_memory controlblock DataPath core cpu; do
+          for f in ControlUnit ImmGen PCPlus4 PCTarget Pc_mux alu alu_mux result_mux pc riscvregfile instruction_memory memory_data controlblock DataPath WriteBlock ReadBlock core cpu; do
             ghdl -a --std=08 ../rtl/$f.vhd
           done
           ghdl -a --std=08 cpu_fib_tb.vhd

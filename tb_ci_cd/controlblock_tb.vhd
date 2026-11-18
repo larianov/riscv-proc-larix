@@ -9,13 +9,13 @@ end entity;
 architecture sim of controlblock_tb is
     signal instr       : std_logic_vector(31 downto 0) := (others => '0');
     signal zero        : std_logic := '0';
-    signal Illegal, RegWrite, AluSrc, PCsrc : std_logic;
+    signal Illegal, RegWrite, AluSrc, PCsrc, Mem_Write : std_logic;
     signal ImmSrc      : std_logic_vector(1 downto 0);
     signal alu_control : std_logic_vector(3 downto 0);
 begin
     dut : entity work.controlblock
         port map(instr => instr, zero => zero, Illegal => Illegal, RegWrite => RegWrite,
-                 AluSrc => AluSrc, ImmSrc => ImmSrc, alu_control => alu_control, PCsrc => PCsrc);
+                 AluSrc => AluSrc, ImmSrc => ImmSrc, alu_control => alu_control, PCsrc => PCsrc, Mem_Write => Mem_Write);
 
     process
         variable expected : std_logic;
@@ -28,7 +28,15 @@ begin
         instr <= x"FFFFFFFF"; wait for 1 ns;
         assert Illegal = '1' and RegWrite = '0' and PCsrc = '0' report "garbage must be illegal" severity error;
 
-        -- PCsrc: beq jumps when zero=1, bne jumps when zero=0, nothing else ever jumps
+        instr <= x"0020A423"; wait for 1 ns; -- sw x2,8(x1)
+        assert Mem_Write = '1' and RegWrite = '0' and AluSrc = '1' and ImmSrc = "01" and Illegal = '0'
+            report "sw" severity error;
+        instr <= x"00500093"; wait for 1 ns;
+        assert Mem_Write = '0' report "addi must not write memory" severity error;
+
+        -- PCsrc: the ALU result is 0 when the compared condition is false for blt/bltu (slt/sltu = 0)
+        -- and for bne (a-b = 0), so: beq jumps on zero=1, bne/blt/bltu jump on zero=0,
+        -- bge/bgeu jump on zero=1 (slt = 0 means "not less"). Nothing else ever jumps.
         for op in 0 to 127 loop
             for f3 in 0 to 7 loop
                 for z in 0 to 1 loop
@@ -38,8 +46,8 @@ begin
                     if z = 1 then zero <= '1'; else zero <= '0'; end if;
                     wait for 1 ns;
                     expected := '0';
-                    if op = 99 and f3 = 0 and z = 1 then expected := '1'; end if;
-                    if op = 99 and f3 = 1 and z = 0 then expected := '1'; end if;
+                    if op = 99 and (f3 = 0 or f3 = 5 or f3 = 7) and z = 1 then expected := '1'; end if;
+                    if op = 99 and (f3 = 1 or f3 = 4 or f3 = 6) and z = 0 then expected := '1'; end if;
                     assert PCsrc = expected
                         report "PCsrc wrong: op=" & integer'image(op) & " f3=" & integer'image(f3) &
                                " zero=" & integer'image(z) severity error;

@@ -11,20 +11,22 @@ architecture sim of controlunit_tb is
     signal opcode : std_logic_vector(6 downto 0) := (others => '0');
     signal funct3 : std_logic_vector(2 downto 0) := (others => '0');
     signal funct7 : std_logic_vector(6 downto 0) := (others => '0');
-    signal RegWrite, AluSrc, Illegal, Branch : std_logic;
+    signal RegWrite, AluSrc, Illegal, Branch, Mem_Write : std_logic;
     signal ImmSrc : std_logic_vector(1 downto 0);
     signal alu_control : std_logic_vector(3 downto 0);
+    signal Result_Src : std_logic_vector(1 downto 0);
 begin
     dut : entity work.ControlUnit
         port map(opcode => opcode, funct3 => funct3, funct7 => funct7, RegWrite => RegWrite,
                  AluSrc => AluSrc, Illegal => Illegal, Branch => Branch, ImmSrc => ImmSrc,
-                 alu_control => alu_control);
+                 alu_control => alu_control, Mem_Write => Mem_Write, Result_Src => Result_Src);
 
     process
         variable f3, f7, op : integer;
         variable exp_illegal : boolean;
         variable exp_ctl : std_logic_vector(3 downto 0);
-        variable exp_branch, exp_alusrc, exp_regwrite : std_logic;
+        variable exp_branch, exp_alusrc, exp_regwrite, exp_memwrite : std_logic;
+        variable exp_rsrc : std_logic_vector(1 downto 0);
         variable errors : integer := 0;
 
         -- alu_control for an ALU operation: (funct3, bit 5 of funct7 = "alternate" op)
@@ -50,7 +52,7 @@ begin
                     funct7 <= std_logic_vector(to_unsigned(f7, 7));
 
                     exp_illegal := true; exp_ctl := "0000"; exp_branch := '0';
-                    exp_alusrc := '0'; exp_regwrite := '0';
+                    exp_alusrc := '0'; exp_regwrite := '0'; exp_memwrite := '0'; exp_rsrc := "00";
 
                     if op = 51 then -- R-type
                         exp_alusrc := '0';
@@ -74,8 +76,21 @@ begin
                         end if;
                         if not exp_illegal then exp_regwrite := '1'; end if;
                     elsif op = 99 then -- branch
-                        if f3 = 0 or f3 = 1 then
+                        if f3 = 0 or f3 = 1 then      -- beq bne: compare by subtraction
                             exp_illegal := false; exp_branch := '1'; exp_ctl := "1000";
+                        elsif f3 = 4 or f3 = 5 then   -- blt bge: signed compare
+                            exp_illegal := false; exp_branch := '1'; exp_ctl := "0010";
+                        elsif f3 = 6 or f3 = 7 then   -- bltu bgeu: unsigned compare
+                            exp_illegal := false; exp_branch := '1'; exp_ctl := "0011";
+                        end if;
+                    elsif op = 35 then -- store: sb sh sw
+                        if f3 <= 2 then
+                            exp_illegal := false; exp_ctl := "0000"; exp_alusrc := '1'; exp_memwrite := '1';
+                        end if;
+                    elsif op = 3 then -- load: lb lh lw lbu lhu
+                        if f3 = 0 or f3 = 1 or f3 = 2 or f3 = 4 or f3 = 5 then
+                            exp_illegal := false; exp_ctl := "0000"; exp_alusrc := '1'; exp_regwrite := '1';
+                            exp_rsrc := "01";
                         end if;
                     end if;
 
@@ -86,9 +101,9 @@ begin
                         report "Illegal wrong: op=" & integer'image(op) & " f3=" & integer'image(f3) &
                                " f7=" & integer'image(f7) severity error;
                     end if;
-                    if RegWrite /= exp_regwrite or Branch /= exp_branch then
+                    if RegWrite /= exp_regwrite or Branch /= exp_branch or Mem_Write /= exp_memwrite then
                         errors := errors + 1;
-                        report "RegWrite/Branch wrong: op=" & integer'image(op) & " f3=" & integer'image(f3) &
+                        report "RegWrite/Branch/Mem_Write wrong: op=" & integer'image(op) & " f3=" & integer'image(f3) &
                                " f7=" & integer'image(f7) severity error;
                     end if;
                     if not exp_illegal then -- other outputs are don't-care for illegal instructions
@@ -97,11 +112,19 @@ begin
                             report "alu_control/AluSrc wrong: op=" & integer'image(op) & " f3=" & integer'image(f3) &
                                    " f7=" & integer'image(f7) severity error;
                         end if;
+                        if Result_Src /= exp_rsrc then
+                            errors := errors + 1;
+                            report "Result_Src wrong: op=" & integer'image(op) & " f3=" & integer'image(f3) severity error;
+                        end if;
                         if exp_branch = '1' and ImmSrc /= "10" then
                             errors := errors + 1;
                             report "ImmSrc must be B-type for branches" severity error;
                         end if;
-                        if exp_branch = '0' and ImmSrc /= "00" then
+                        if exp_memwrite = '1' and ImmSrc /= "01" then
+                            errors := errors + 1;
+                            report "ImmSrc must be S-type for stores" severity error;
+                        end if;
+                        if exp_branch = '0' and exp_memwrite = '0' and ImmSrc /= "00" then
                             errors := errors + 1;
                             report "ImmSrc must be I-type for ALU instructions" severity error;
                         end if;

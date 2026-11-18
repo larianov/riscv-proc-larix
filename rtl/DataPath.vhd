@@ -14,7 +14,7 @@ entity DataPath is
         Zero : out STD_LOGIC;
         REZ : out std_logic_vector(31 downto 0);
         PC : out std_logic_vector(31 downto 0);
-        RD : in std_logic_vector(31 downto 0);
+        ReadData : in std_logic_vector(31 downto 0);
         Result_Src : in std_logic_vector(1 downto 0);
         WD : out std_logic_vector(31 downto 0)
     );
@@ -92,7 +92,7 @@ begin
     result_mux_inst : entity work.result_mux
         port map(
             Result_Src => Result_Src,
-            RD         => RD,
+            ReadData   => ReadData,
             ALU_Res    => Alu_Result,
             PC_4       => PC_NEXT_4,
             Mux_Res    => Write_Input

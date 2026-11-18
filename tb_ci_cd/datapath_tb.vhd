@@ -15,14 +15,15 @@ architecture sim of datapath_tb is
     signal alu_control : std_logic_vector(3 downto 0) := "0000";
     signal RegWrite    : std_logic := '0';
     signal Zero        : std_logic;
-    signal REZ, PC     : std_logic_vector(31 downto 0);
+    signal REZ, PC, WD : std_logic_vector(31 downto 0);
 begin
     clk <= not clk after 5 ns;
 
     dut : entity work.DataPath
         port map(clk => clk, rst => rst, PC_Src => PC_Src, ImmSrc => ImmSrc, instr => instr,
                  AluSrc => AluSrc, alu_control => alu_control, RegWrite => RegWrite,
-                 Zero => Zero, REZ => REZ, PC => PC);
+                 Zero => Zero, REZ => REZ, PC => PC,
+                 ReadData => x"00000000", Result_Src => "00", WD => WD);
 
     process
     begin

@@ -7,17 +7,18 @@ entity cpu is
         clk : in std_logic;
         rst : in std_logic;
         Illegal : out std_logic;
-        rez : out std_logic_vector(31 downto 0);
+        RezOUT : out std_logic_vector(31 downto 0);
         PC : out std_logic_vector(31 downto 0)
     );
 end entity cpu;
 
 
 architecture RTL of cpu is
+    signal rez : std_logic_vector(31 downto 0);
     signal instr : std_logic_vector(31 downto 0) := (others => '0');
     signal PC_s : std_logic_vector(31 downto 0) := (others => '0');
-    signal RD : std_logic_vector(31 downto 0);
-    signal WE : std_logic;
+    signal ReadData : std_logic_vector(31 downto 0);
+    signal WE : std_logic_vector(3 downto 0);
     signal WD : std_logic_vector(31 downto 0);
     
     
@@ -39,9 +40,9 @@ begin
             PC      => PC_s,
             Illegal => Illegal,
             rez     => rez,
-            RD      => RD,
-            Mem_Write => WE,
-            WD        => WD
+            OUT_OF_MEMORY_DATA => ReadData,
+            WD      => WD,
+            WE      => WE    
         );
     memory_data_inst : entity work.memory_data
         generic map(
@@ -52,7 +53,8 @@ begin
             address => rez,
             wD      => wD,
             WE      => WE,
-            RD      => RD
+            RD      => ReadData
         );
     PC <= PC_s;
+    RezOUT <= rez;
 end architecture RTL;
