@@ -8,10 +8,11 @@ entity ControlUnit is
         funct3 : in std_logic_vector(2 downto 0);
         funct7 : in std_logic_vector(6 downto 0);
         RegWrite : out std_logic;
-        AluSrc : out std_logic;
+        ASrc : out std_logic_vector(1 downto 0);
+        BSrc : out std_logic;
         Illegal : out STD_LOGIC;
         Branch : out STD_LOGIC;
-        ImmSrc : out std_logic_vector(1 downto 0);
+        ImmSrc : out std_logic_vector(2 downto 0);
         Mem_Write : out STD_LOGIC;
         Result_Src : out std_logic_vector(1 downto 0) := "01";
         alu_control : out std_logic_vector(3 downto 0);
@@ -29,15 +30,16 @@ begin
         Illegal <= '0';
         RegWrite <= '0';
         JalrReg <= '0';
-        AluSrc <= '0';
+        ASrc <= (others => '0');
+        BSrc <= '0';
         Jump <= '0';
         Branch <= '0';
-        ImmSrc <= "00";
+        ImmSrc <= "000";
         Mem_Write <= '0';
         Result_Src <= (others => '0');
         alu_control <= (others => '0');
         if opcode = "0110011" then
-            AluSrc <= '0';
+            BSrc <= '0';
             if funct3 = "000" then
                 if funct7 = "0000000" then
                     RegWrite <= '1';
@@ -106,7 +108,7 @@ begin
             end if;
 
         elsif opcode = "0010011" then
-            AluSrc <= '1';
+            BSrc <= '1';
             if funct3 = "000" then
                 alu_control <= "0000";
                 RegWrite <= '1';
@@ -148,15 +150,15 @@ begin
         elsif opcode = "1100011" then
             if funct3 = "000" or funct3 = "001" then
                 Branch <= '1';
-                ImmSrc <= "10";
+                ImmSrc <= "010";
                 alu_control <= "1000";
             elsif funct3 = "100" or funct3 = "101" then
                 Branch <= '1';
-                ImmSrc <= "10";
+                ImmSrc <= "010";
                 alu_control <= "0010";
             elsif funct3 = "110" or funct3 = "111" then
                 Branch <= '1';
-                ImmSrc <= "10";
+                ImmSrc <= "010";
                 alu_control <= "0011";
             else
                 Illegal <= '1';
@@ -165,16 +167,16 @@ begin
             if funct3(2) /= '1'  and funct3 /= "011" then
                 Mem_Write <= '1';
                 alu_control <= "0000";
-                AluSrc <= '1';
-                ImmSrc <= "01";
+                BSrc <= '1';
+                ImmSrc <= "001";
             else
                 Illegal <= '1';
             end if;
         elsif opcode = "0000011" then
             if funct3 = "000" or funct3 = "001" or funct3 = "100" or funct3 = "101" or funct3 = "010" then
                 RegWrite <= '1';
-                ImmSrc <= "00";
-                AluSrc <= '1';
+                ImmSrc <= "000";
+                BSrc <= '1';
                 alu_control <= "0000";
                 Result_Src <= "01";
             else
@@ -184,7 +186,7 @@ begin
             Jump <= '1';
             Result_Src <= "10";
             RegWrite <= '1';
-            ImmSrc <= "11";
+            ImmSrc <= "011";
         elsif opcode = "1100111" then
             if funct3 = "000" then
                 JalrReg <= '1';
@@ -193,6 +195,15 @@ begin
                 RegWrite <= '1';
             else
                 Illegal <= '1';
+            end if;
+        elsif opcode = "0110111" or opcode = "0010111" then
+            BSrc <= '1';
+            ImmSrc <= "100";
+            RegWrite <= '1';
+            if opcode = "0110111" then
+                ASrc <= "10";
+            else
+                ASrc <= "01";
             end if;
         else
             Illegal <= '1';

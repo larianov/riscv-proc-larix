@@ -11,14 +11,15 @@ architecture sim of controlunit_tb is
     signal opcode : std_logic_vector(6 downto 0) := (others => '0');
     signal funct3 : std_logic_vector(2 downto 0) := (others => '0');
     signal funct7 : std_logic_vector(6 downto 0) := (others => '0');
-    signal RegWrite, AluSrc, Illegal, Branch, Mem_Write, JalrReg, Jump : std_logic;
-    signal ImmSrc : std_logic_vector(1 downto 0);
+    signal RegWrite, BSrc, Illegal, Branch, Mem_Write, JalrReg, Jump : std_logic;
+    signal ASrc : std_logic_vector(1 downto 0);
+    signal ImmSrc : std_logic_vector(2 downto 0);
     signal alu_control : std_logic_vector(3 downto 0);
     signal Result_Src : std_logic_vector(1 downto 0);
 begin
     dut : entity work.ControlUnit
         port map(opcode => opcode, funct3 => funct3, funct7 => funct7, RegWrite => RegWrite,
-                 AluSrc => AluSrc, Illegal => Illegal, Branch => Branch, ImmSrc => ImmSrc,
+                 ASrc => ASrc, BSrc => BSrc, Illegal => Illegal, Branch => Branch, ImmSrc => ImmSrc,
                  alu_control => alu_control, Mem_Write => Mem_Write, Result_Src => Result_Src,
                  JalrReg => JalrReg, Jump => Jump);
 
@@ -26,10 +27,21 @@ begin
         variable f3, f7, op : integer;
         variable exp_illegal : boolean;
         variable exp_ctl : std_logic_vector(3 downto 0);
-        variable exp_branch, exp_alusrc, exp_regwrite, exp_memwrite, exp_jump, exp_jalr : std_logic;
+        variable exp_branch, exp_bsrc, exp_regwrite, exp_memwrite, exp_jump, exp_jalr : std_logic;
         variable check_alu : boolean;
-        variable exp_rsrc : std_logic_vector(1 downto 0);
+        variable exp_rsrc, exp_asrc : std_logic_vector(1 downto 0);
+        variable exp_imm : std_logic_vector(2 downto 0);
         variable errors : integer := 0;
+        -- ImmSrc encoding
+        constant IMM_I : std_logic_vector(2 downto 0) := "000";
+        constant IMM_S : std_logic_vector(2 downto 0) := "001";
+        constant IMM_B : std_logic_vector(2 downto 0) := "010";
+        constant IMM_J : std_logic_vector(2 downto 0) := "011";
+        constant IMM_U : std_logic_vector(2 downto 0) := "100";
+        -- ASrc encoding (SrcA of the ALU)
+        constant A_RS1  : std_logic_vector(1 downto 0) := "00";
+        constant A_PC   : std_logic_vector(1 downto 0) := "01";
+        constant A_ZERO : std_logic_vector(1 downto 0) := "10";
 
         -- alu_control for an ALU operation: (funct3, bit 5 of funct7 = "alternate" op)
         function alu_code(f3 : integer; alt : boolean) return std_logic_vector is
@@ -54,11 +66,12 @@ begin
                     funct7 <= std_logic_vector(to_unsigned(f7, 7));
 
                     exp_illegal := true; exp_ctl := "0000"; exp_branch := '0';
-                    exp_alusrc := '0'; exp_regwrite := '0'; exp_memwrite := '0'; exp_rsrc := "00";
+                    exp_bsrc := '0'; exp_regwrite := '0'; exp_memwrite := '0'; exp_rsrc := "00";
+                    exp_asrc := A_RS1; exp_imm := IMM_I;
                     exp_jump := '0'; exp_jalr := '0'; check_alu := true;
 
                     if op = 51 then -- R-type
-                        exp_alusrc := '0';
+                        exp_bsrc := '0';
                         if f7 = 0 then
                             exp_illegal := false; exp_ctl := alu_code(f3, false);
                         elsif f7 = 32 and (f3 = 0 or f3 = 5) then
@@ -66,7 +79,7 @@ begin
                         end if;
                         if not exp_illegal then exp_regwrite := '1'; end if;
                     elsif op = 19 then -- I-type ALU
-                        exp_alusrc := '1';
+                        exp_bsrc := '1';
                         if f3 = 1 then
                             exp_illegal := (f7 /= 0);
                             exp_ctl := alu_code(f3, false);
@@ -80,29 +93,36 @@ begin
                         if not exp_illegal then exp_regwrite := '1'; end if;
                     elsif op = 99 then -- branch
                         if f3 = 0 or f3 = 1 then      -- beq bne: compare by subtraction
-                            exp_illegal := false; exp_branch := '1'; exp_ctl := "1000";
+                            exp_illegal := false; exp_branch := '1'; exp_ctl := "1000"; exp_imm := IMM_B;
                         elsif f3 = 4 or f3 = 5 then   -- blt bge: signed compare
-                            exp_illegal := false; exp_branch := '1'; exp_ctl := "0010";
+                            exp_illegal := false; exp_branch := '1'; exp_ctl := "0010"; exp_imm := IMM_B;
                         elsif f3 = 6 or f3 = 7 then   -- bltu bgeu: unsigned compare
-                            exp_illegal := false; exp_branch := '1'; exp_ctl := "0011";
+                            exp_illegal := false; exp_branch := '1'; exp_ctl := "0011"; exp_imm := IMM_B;
                         end if;
                     elsif op = 35 then -- store: sb sh sw
                         if f3 <= 2 then
-                            exp_illegal := false; exp_ctl := "0000"; exp_alusrc := '1'; exp_memwrite := '1';
+                            exp_illegal := false; exp_ctl := "0000"; exp_bsrc := '1'; exp_memwrite := '1';
+                            exp_imm := IMM_S;
                         end if;
                     elsif op = 3 then -- load: lb lh lw lbu lhu
                         if f3 = 0 or f3 = 1 or f3 = 2 or f3 = 4 or f3 = 5 then
-                            exp_illegal := false; exp_ctl := "0000"; exp_alusrc := '1'; exp_regwrite := '1';
+                            exp_illegal := false; exp_ctl := "0000"; exp_bsrc := '1'; exp_regwrite := '1';
                             exp_rsrc := "01";
                         end if;
                     elsif op = 111 then -- jal: rd = PC+4, PC = PC + J-imm (ALU unused)
                         exp_illegal := false; exp_jump := '1'; exp_regwrite := '1'; exp_rsrc := "10";
-                        check_alu := false;
+                        exp_imm := IMM_J; check_alu := false;
                     elsif op = 103 then -- jalr (funct3 must be 0): rd = PC+4, PC = (rs1 + I-imm) & ~1
                         if f3 = 0 then
                             exp_illegal := false; exp_jump := '1'; exp_jalr := '1'; exp_regwrite := '1';
                             exp_rsrc := "10"; check_alu := false;
                         end if;
+                    elsif op = 55 then -- lui: rd = U-imm  (ALU: 0 + imm)
+                        exp_illegal := false; exp_regwrite := '1'; exp_imm := IMM_U;
+                        exp_asrc := A_ZERO; exp_bsrc := '1'; exp_ctl := "0000";
+                    elsif op = 23 then -- auipc: rd = PC + U-imm  (ALU: PC + imm)
+                        exp_illegal := false; exp_regwrite := '1'; exp_imm := IMM_U;
+                        exp_asrc := A_PC; exp_bsrc := '1'; exp_ctl := "0000";
                     end if;
 
                     wait for 1 ns;
@@ -122,30 +142,20 @@ begin
                         report "Jump/JalrReg wrong: op=" & integer'image(op) & " f3=" & integer'image(f3) severity error;
                     end if;
                     if not exp_illegal then -- other outputs are don't-care for illegal instructions
-                        if check_alu and (alu_control /= exp_ctl or AluSrc /= exp_alusrc) then
+                        if check_alu and (alu_control /= exp_ctl or BSrc /= exp_bsrc or ASrc /= exp_asrc) then
                             errors := errors + 1;
-                            report "alu_control/AluSrc wrong: op=" & integer'image(op) & " f3=" & integer'image(f3) &
-                                   " f7=" & integer'image(f7) severity error;
+                            report "alu_control/ASrc/BSrc wrong: op=" & integer'image(op) & " f3=" & integer'image(f3) &
+                                   " f7=" & integer'image(f7) & " got ctl=" & to_string(alu_control) &
+                                   " ASrc=" & to_string(ASrc) & " BSrc=" & std_logic'image(BSrc) severity error;
                         end if;
                         if Result_Src /= exp_rsrc then
                             errors := errors + 1;
                             report "Result_Src wrong: op=" & integer'image(op) & " f3=" & integer'image(f3) severity error;
                         end if;
-                        if exp_branch = '1' and ImmSrc /= "10" then
+                        if ImmSrc /= exp_imm then
                             errors := errors + 1;
-                            report "ImmSrc must be B-type for branches" severity error;
-                        end if;
-                        if exp_memwrite = '1' and ImmSrc /= "01" then
-                            errors := errors + 1;
-                            report "ImmSrc must be S-type for stores" severity error;
-                        end if;
-                        if op = 111 and ImmSrc /= "11" then
-                            errors := errors + 1;
-                            report "ImmSrc must be J-type for jal" severity error;
-                        end if;
-                        if exp_branch = '0' and exp_memwrite = '0' and op /= 111 and ImmSrc /= "00" then
-                            errors := errors + 1;
-                            report "ImmSrc must be I-type for ALU instructions" severity error;
+                            report "ImmSrc wrong: op=" & integer'image(op) & " f3=" & integer'image(f3) &
+                                   " got " & to_string(ImmSrc) & " expected " & to_string(exp_imm) severity error;
                         end if;
                     end if;
                 end loop;

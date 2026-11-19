@@ -6,9 +6,10 @@ entity DataPath is
         clk : in std_logic;
         rst : in std_logic;
         PC_Src : in std_logic;
-        ImmSrc : in std_logic_vector(1 downto 0);
+        ImmSrc : in std_logic_vector(2 downto 0);
         instr : in std_logic_vector(31 downto 0);
-        AluSrc : in std_logic;
+        AluSrcB : in std_logic;
+        AluSRCA : std_logic_vector(1 downto 0);
         alu_control : in std_logic_vector(3 downto 0);
         RegWrite : in STD_LOGIC;
         Zero : out STD_LOGIC;
@@ -26,10 +27,11 @@ architecture RTL of DataPath is
     signal Alu_Result : std_logic_vector(31 downto 0);
     signal A_input : std_logic_vector(31 downto 0);
     signal B_input : std_logic_vector(31 downto 0);
-    signal ImmOut : std_logic_vector(31 downto 0) := (others => '0');
     signal PC_NOW : STD_LOGIC_VECTOR(31 downto 0) := (others => '0'); 
+    signal ImmOut : std_logic_vector(31 downto 0) := (others => '0');
     signal PC_NEXT_4 : STD_LOGIC_VECTOR(31 downto 0) := (others => '0'); 
     signal PC_NEXT_OFFSET : std_logic_vector(31 downto 0) := (others => '0');
+    signal A_input_real : std_logic_vector(31 downto 0);
     signal B_input_real : std_logic_vector(31 downto 0);
     signal PC_Next_R : std_logic_vector(31 downto 0) := (others => '0');
     signal PCtarget_IN : std_logic_vector(31 downto 0) := (others => '0');
@@ -94,16 +96,24 @@ begin
             imm_src => ImmSrc,
             imm_out => ImmOut
         );
-    alu_mux_inst : entity work.alu_mux
+    
+    alu_muxSRCB_inst : entity work.alu_mux
         port map(
             rd2    => B_input,
             imm    => ImmOut,
-            S      => AluSrc,
+            S      => AluSrcB,
             muxout => B_input_real
+        );
+    SrcAMux_inst : entity work.SrcAMux
+        port map(
+            SrcA => A_input,
+            PC   => PC_NOW,
+            S    => AluSRCA,
+            Y    => A_input_real
         );
     alu_inst : entity work.alu
         port map(
-            A_input     => A_input,
+            A_input     => A_input_real,
             B_input     => B_input_real,
             alu_control => alu_control,
             res_out     => Alu_Result,

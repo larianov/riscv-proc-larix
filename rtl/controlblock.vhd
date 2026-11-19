@@ -8,8 +8,9 @@ entity controlblock is
         zero : in STD_LOGIC;
         Illegal : out std_logic;
         RegWrite : out std_logic;
-        AluSrc : out std_logic;
-        ImmSrc : out std_logic_vector(1 downto 0);
+        ASrc : out std_logic_vector(1 downto 0);
+        BSrc : out std_logic;
+        ImmSrc : out std_logic_vector(2 downto 0);
         alu_control : out std_logic_vector(3 downto 0);
         PCsrc : out STD_LOGIC;
         Result_Src : out std_logic_vector(1 downto 0);
@@ -30,7 +31,8 @@ begin
             funct3      => instr(14 downto 12),
             funct7      => instr(31 downto 25),
             RegWrite    => RegWrite,
-            AluSrc      => AluSrc,
+            ASrc        => ASrc,
+            BSrc        => BSrc,
             Illegal     => Illegal,
             Branch      => Branch,
             ImmSrc      => ImmSrc,

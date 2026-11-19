@@ -8,7 +8,7 @@ end entity;
 
 architecture sim of immgen_tb is
     signal imm     : std_logic_vector(31 downto 0) := (others => '0');
-    signal imm_src : std_logic_vector(1 downto 0)  := "00";
+    signal imm_src : std_logic_vector(2 downto 0)  := "000";
     signal imm_out : std_logic_vector(31 downto 0);
 begin
     dut : entity work.ImmGen port map(imm => imm, imm_src => imm_src, imm_out => imm_out);
@@ -19,7 +19,7 @@ begin
         variable r  : real;
         variable hi : std_logic_vector(15 downto 0);
         variable w  : std_logic_vector(31 downto 0);
-        variable exp_i, exp_b, exp_s, exp_j : std_logic_vector(31 downto 0);
+        variable exp_i, exp_b, exp_s, exp_j, exp_u : std_logic_vector(31 downto 0);
     begin
         for k in 0 to 20000 loop
             uniform(s1, s2, r);
@@ -36,15 +36,19 @@ begin
 
             exp_j := (31 downto 20 => w(31)) & w(19 downto 12) & w(20) & w(30 downto 21) & '0';
 
+            exp_u := w(31 downto 12) & x"000";
+
             imm <= w;
-            imm_src <= "00"; wait for 1 ns;
+            imm_src <= "000"; wait for 1 ns;
             assert imm_out = exp_i report "I-immediate wrong for " & to_hstring(w) severity error;
-            imm_src <= "10"; wait for 1 ns;
+            imm_src <= "010"; wait for 1 ns;
             assert imm_out = exp_b report "B-immediate wrong for " & to_hstring(w) severity error;
-            imm_src <= "01"; wait for 1 ns;
+            imm_src <= "001"; wait for 1 ns;
             assert imm_out = exp_s report "S-immediate wrong for " & to_hstring(w) severity error;
-            imm_src <= "11"; wait for 1 ns;
+            imm_src <= "011"; wait for 1 ns;
             assert imm_out = exp_j report "J-immediate wrong for " & to_hstring(w) severity error;
+            imm_src <= "100"; wait for 1 ns;
+            assert imm_out = exp_u report "U-immediate wrong for " & to_hstring(w) severity error;
         end loop;
         report "immgen_tb done";
         wait;

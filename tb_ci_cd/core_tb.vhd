@@ -3,7 +3,7 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use ieee.math_real.all;
 
--- Runs a random program (R-type, I-type, loads, stores, forward beq/bne) on the core and compares every cycle
+-- Runs a random program (R-type, I-type, loads, stores, forward beq/bne, jal/jalr, lui/auipc) on the core and compares every cycle
 -- with a software model of RV32I: PC, ALU result (rez), the register contents and the store
 -- interface (WE byte enables / WD data lanes). Loads (aligned, x0 base) read a memory word that is
 -- a pure function of the address; the loaded value is verified through later ALU operations.
@@ -73,6 +73,11 @@ architecture sim of core_tb is
     begin
         return std_logic_vector(to_signed(imm, 12)) & std_logic_vector(to_unsigned(rs1, 5)) &
                "000" & std_logic_vector(to_unsigned(rd, 5)) & "1100111";
+    end function;
+
+    function enc_u(imm20, rd : integer; opcode : std_logic_vector(6 downto 0)) return std_logic_vector is
+    begin
+        return std_logic_vector(to_unsigned(imm20, 20)) & std_logic_vector(to_unsigned(rd, 5)) & opcode;
     end function;
 
     -- memory contents: the word at a (word aligned) address
@@ -163,8 +168,12 @@ begin
         end loop;
 
         for n in 7 to ROM_SIZE - 20 loop
-            kind := rnd(14);
-            if kind < 5 then      -- R-type
+            kind := rnd(16);
+            if kind = 14 then     -- lui
+                p(n) := enc_u(rnd(1048576), rnd(8), "0110111");
+            elsif kind = 15 then  -- auipc
+                p(n) := enc_u(rnd(1048576), rnd(8), "0010111");
+            elsif kind < 5 then   -- R-type
                 sel := rnd(10);
                 p(n) := enc_r(R_OPS(sel)(1), rnd(8), rnd(8), R_OPS(sel)(0), rnd(8));
             elsif kind < 9 then   -- I-type
@@ -217,7 +226,7 @@ begin
         variable alt, taken : boolean;
         variable exp_we : std_logic_vector(3 downto 0);
         variable width, off : integer;
-        variable stores, loads, jumps : integer := 0;
+        variable stores, loads, jumps, uppers : integer := 0;
         variable tgt : std_logic_vector(31 downto 0);
         variable cycles, branches_taken, branches_not : integer := 0;
     begin
@@ -292,6 +301,16 @@ begin
                 tgt := std_logic_vector(unsigned(a) + unsigned(b));
                 pc_m := to_integer(unsigned(tgt(31 downto 1) & '0'));
                 jumps := jumps + 1;
+            elsif w(6 downto 0) = "0110111" then       -- lui: rd = imm << 12
+                exp_rez := w(31 downto 12) & x"000";
+                if rd /= 0 then regs(rd) := exp_rez; end if;
+                uppers := uppers + 1;
+                pc_m := pc_m + 4;
+            elsif w(6 downto 0) = "0010111" then       -- auipc: rd = pc + (imm << 12)
+                exp_rez := std_logic_vector(to_unsigned(pc_m, 32) + unsigned(std_logic_vector'(w(31 downto 12) & x"000")));
+                if rd /= 0 then regs(rd) := exp_rez; end if;
+                uppers := uppers + 1;
+                pc_m := pc_m + 4;
             else                                       -- branch: ALU computes rs1 - rs2
                 exp_rez := std_logic_vector(unsigned(a) - unsigned(regs(rs2)));
                 taken := (exp_rez = x"00000000") = (f3 = "000");
@@ -320,6 +339,7 @@ begin
         assert loads > 20 report "program has too few loads" severity error;
         assert stores > 20 report "program has too few stores" severity error;
         assert jumps > 20 report "program has too few jumps" severity error;
+        assert uppers > 20 report "program has too few lui/auipc" severity error;
         assert branches_taken > 20 and branches_not > 20 report "program has too few branches" severity error;
 
         -- halt loop must stay put

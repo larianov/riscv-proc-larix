@@ -9,13 +9,14 @@ end entity;
 architecture sim of controlblock_tb is
     signal instr       : std_logic_vector(31 downto 0) := (others => '0');
     signal zero        : std_logic := '0';
-    signal Illegal, RegWrite, AluSrc, PCsrc, Mem_Write, JalrReg : std_logic;
-    signal ImmSrc      : std_logic_vector(1 downto 0);
+    signal Illegal, RegWrite, BSrc, PCsrc, Mem_Write, JalrReg : std_logic;
+    signal ASrc        : std_logic_vector(1 downto 0);
+    signal ImmSrc      : std_logic_vector(2 downto 0);
     signal alu_control : std_logic_vector(3 downto 0);
 begin
     dut : entity work.controlblock
         port map(instr => instr, zero => zero, Illegal => Illegal, RegWrite => RegWrite,
-                 AluSrc => AluSrc, ImmSrc => ImmSrc, alu_control => alu_control, PCsrc => PCsrc, Mem_Write => Mem_Write,
+                 ASrc => ASrc, BSrc => BSrc, ImmSrc => ImmSrc, alu_control => alu_control, PCsrc => PCsrc, Mem_Write => Mem_Write,
                  JalrReg => JalrReg);
 
     process
@@ -23,26 +24,37 @@ begin
     begin
         -- named examples
         instr <= x"00500093"; wait for 1 ns; -- addi x1,x0,5
-        assert RegWrite = '1' and AluSrc = '1' and alu_control = "0000" and Illegal = '0' report "addi" severity error;
+        assert RegWrite = '1' and BSrc = '1' and ASrc = "00" and alu_control = "0000" and Illegal = '0' report "addi" severity error;
         instr <= x"40208133"; wait for 1 ns; -- sub x2,x1,x2
-        assert RegWrite = '1' and AluSrc = '0' and alu_control = "1000" and Illegal = '0' report "sub" severity error;
+        assert RegWrite = '1' and BSrc = '0' and ASrc = "00" and alu_control = "1000" and Illegal = '0' report "sub" severity error;
         instr <= x"FFFFFFFF"; wait for 1 ns;
         assert Illegal = '1' and RegWrite = '0' and PCsrc = '0' report "garbage must be illegal" severity error;
 
         instr <= x"0020A423"; wait for 1 ns; -- sw x2,8(x1)
-        assert Mem_Write = '1' and RegWrite = '0' and AluSrc = '1' and ImmSrc = "01" and Illegal = '0'
+        assert Mem_Write = '1' and RegWrite = '0' and BSrc = '1' and ImmSrc = "001" and Illegal = '0'
             report "sw" severity error;
         instr <= x"00500093"; wait for 1 ns;
         assert Mem_Write = '0' report "addi must not write memory" severity error;
 
         instr <= x"008000EF"; zero <= '0'; wait for 1 ns; -- jal x1,+8
-        assert PCsrc = '1' and RegWrite = '1' and JalrReg = '0' and ImmSrc = "11" and Illegal = '0'
+        assert PCsrc = '1' and RegWrite = '1' and JalrReg = '0' and ImmSrc = "011" and Illegal = '0'
             report "jal" severity error;
         instr <= x"00408167"; zero <= '0'; wait for 1 ns; -- jalr x2,4(x1)
         assert PCsrc = '1' and RegWrite = '1' and JalrReg = '1' and Illegal = '0' report "jalr" severity error;
         instr <= x"00409167"; wait for 1 ns; -- jalr with funct3=1 is illegal
         assert Illegal = '1' and PCsrc = '0' and JalrReg = '0' report "jalr funct3/=0 must be illegal" severity error;
         zero <= '0';
+
+        instr <= x"123450B7"; wait for 1 ns; -- lui x1,0x12345
+        assert Illegal = '0' and RegWrite = '1' and Mem_Write = '0' and PCsrc = '0'
+            report "lui: must be legal, write rd, not jump" severity error;
+        assert ImmSrc = "100" and BSrc = '1' and ASrc = "10" and alu_control = "0000"
+            report "lui: ALU must compute 0 + U-imm" severity error;
+        instr <= x"00001117"; wait for 1 ns; -- auipc x2,0x1
+        assert Illegal = '0' and RegWrite = '1' and Mem_Write = '0' and PCsrc = '0'
+            report "auipc: must be legal, write rd, not jump" severity error;
+        assert ImmSrc = "100" and BSrc = '1' and ASrc = "01" and alu_control = "0000"
+            report "auipc: ALU must compute PC + U-imm" severity error;
 
         -- PCsrc: the ALU result is 0 when the compared condition is false for blt/bltu (slt/sltu = 0)
         -- and for bne (a-b = 0), so: beq jumps on zero=1, bne/blt/bltu jump on zero=0,

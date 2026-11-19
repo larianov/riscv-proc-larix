@@ -19,8 +19,9 @@ architecture RTL of core is
     signal zero : std_logic := '0';
     signal Mem_Write:  STD_LOGIC := '0';
     signal RegWrite : std_logic;
-    signal AluSrc : std_logic := '0';
-    signal ImmSrc : std_logic_vector(1 downto 0) := (others => '0');
+    signal ASrc : std_logic_vector(1 downto 0);
+    signal BSrc : std_logic := '0';
+    signal ImmSrc : std_logic_vector(2 downto 0) := (others => '0');
     signal alu_control : std_logic_vector(3 downto 0);
     signal PC_src : std_logic := '0';
     signal Result_Src : std_logic_vector(1 downto 0);
@@ -28,8 +29,6 @@ architecture RTL of core is
     signal temp_res: std_logic_vector(31 downto 0) := (others => '0');
     signal READDATA : std_logic_vector(31 downto 0);
     signal JalrReg : std_logic;
-    
-        
 begin
     DataPath_inst : entity work.DataPath
         port map(
@@ -38,7 +37,8 @@ begin
             PC_Src      => PC_src,
             ImmSrc      => ImmSrc,
             instr       => instr,
-            AluSrc      => AluSrc,
+            AluSrcB      => BSrc,
+            AluSRCA     => ASrc,
             alu_control => alu_control,
             RegWrite    => RegWrite,
             Zero        => Zero,
@@ -55,7 +55,8 @@ begin
             zero        => zero,
             Illegal     => Illegal,
             RegWrite    => RegWrite,
-            AluSrc      => AluSrc,
+            ASrc        => ASrc,
+            BSrc      => BSrc,
             ImmSrc      => ImmSrc,
             alu_control => alu_control,
             PCsrc       => PC_src,
