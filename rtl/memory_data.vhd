@@ -21,8 +21,7 @@ architecture RTL of memory_data is
     signal index : integer range 0 to size-1 := 0;
 begin
     process(clk)
-        variable temp_we : std_logic_vector(31 downto 0) := (others => '0');
-        
+        variable temp_we : std_logic_vector(31 downto 0) := (others => '0');    
     begin
         if rising_edge(clk) then
             if we /= "0000" then

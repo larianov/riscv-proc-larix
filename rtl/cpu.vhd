@@ -23,15 +23,21 @@ architecture RTL of cpu is
     
     
 begin
-    instruction_memory_inst : entity work.instruction_memory
+    unifiedmem_inst : entity work.unifiedmem
         generic map(
             file_S => "hex.hex",
-            size   => 1000
+            size   => 128
         )
         port map(
-            PC        => PC_s,
-            instr_out => instr
+            PC        => PC,
+            instr_out => instr,
+            clk       => clk,
+            address   => rez,
+            wD        => wD,
+            WE        => WE,
+            RD        => ReadData
         );
+    
     core_inst : entity work.core
         port map(
             rst     => rst,
@@ -43,17 +49,6 @@ begin
             OUT_OF_MEMORY_DATA => ReadData,
             WD      => WD,
             WE      => WE    
-        );
-    memory_data_inst : entity work.memory_data
-        generic map(
-            size => 32
-        )
-        port map(
-            clk     => clk,
-            address => rez,
-            wD      => wD,
-            WE      => WE,
-            RD      => ReadData
         );
     PC <= PC_s;
     RezOUT <= rez;
