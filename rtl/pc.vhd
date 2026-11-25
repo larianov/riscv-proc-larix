@@ -18,7 +18,7 @@ begin
     begin
         if rising_edge(clk) then
             if rst = '1' then
-                PC_REG <= (others => '0');
+                PC_REG <= (x"0000_1000");
             else
                 PC_REG <= PCNext;
             end if;

@@ -12,6 +12,7 @@ end entity;
 
 architecture sim of core_tb is
     constant ROM_SIZE : integer := 1024;
+    constant BASE     : integer := 16#1000#; -- reset vector (boot ROM address)
     type rom_t is array (0 to ROM_SIZE - 1) of std_logic_vector(31 downto 0);
 
     signal clk     : std_logic := '0';
@@ -131,8 +132,9 @@ architecture sim of core_tb is
 begin
     clk <= not clk after 5 ns;
 
-    -- instruction fetch: combinational ROM
-    instr <= rom(to_integer(unsigned(PC(11 downto 2)))) when to_integer(unsigned(PC)) < 4 * ROM_SIZE
+    -- instruction fetch: combinational ROM placed at BASE
+    instr <= rom((to_integer(unsigned(PC)) - BASE) / 4)
+             when to_integer(unsigned(PC)) >= BASE and to_integer(unsigned(PC)) < BASE + 4 * ROM_SIZE
              else x"00000013";
 
     mem_rd <= mem_word(rez);
@@ -166,8 +168,10 @@ begin
         for r in 1 to 7 loop
             p(r - 1) := enc_i(rnd(4096) - 2048, 0, 0, r);
         end loop;
+        -- x8 = BASE: base register for jalr (random ops only touch x0..x7, so x8 stays BASE)
+        p(7) := enc_u(BASE / 4096, 8, "0110111");
 
-        for n in 7 to ROM_SIZE - 20 loop
+        for n in 8 to ROM_SIZE - 20 loop
             kind := rnd(16);
             if kind = 14 then     -- lui
                 p(n) := enc_u(rnd(1048576), rnd(8), "0110111");
@@ -205,8 +209,8 @@ begin
                 p(n) := enc_b(8 + 4 * rnd(2), rnd(8), rnd(8), rnd(2));      -- beq / bne
             elsif kind < 13 or n > 500 then -- jal skipping 1 or 2 instructions, link into x0..x7
                 p(n) := enc_j(8 + 4 * rnd(2), rnd(8));
-            else                  -- jalr x0-based: absolute target imm, odd imm exercises the bit-0 clear
-                p(n) := enc_jalr(4 * (n + 2 + rnd(2)) + 1, 0, rnd(8));
+            else                  -- jalr x8-based (x8 = BASE): odd imm exercises the bit-0 clear
+                p(n) := enc_jalr(4 * (n + 2 + rnd(2)) + 1, 8, rnd(8));
             end if;
         end loop;
         p(ROM_SIZE - 1) := x"00000063"; -- beq x0,x0,0  : halt
@@ -218,7 +222,7 @@ begin
     check : process
         type reg_array is array (0 to 31) of std_logic_vector(31 downto 0);
         variable regs : reg_array := (others => (others => '0'));
-        variable pc_m : integer := 0;
+        variable pc_m : integer := BASE;
         variable w    : std_logic_vector(31 downto 0);
         variable a, b, exp_rez : std_logic_vector(31 downto 0);
         variable rd, rs1, rs2 : integer;
@@ -235,8 +239,8 @@ begin
         wait until falling_edge(clk);
         rst <= '0';
 
-        while pc_m /= 4 * (ROM_SIZE - 1) loop
-            w   := rom(pc_m / 4);
+        while pc_m /= BASE + 4 * (ROM_SIZE - 1) loop
+            w   := rom((pc_m - BASE) / 4);
             rd  := to_integer(unsigned(w(11 downto 7)));
             rs1 := to_integer(unsigned(w(19 downto 15)));
             rs2 := to_integer(unsigned(w(24 downto 20)));
@@ -345,7 +349,7 @@ begin
         -- halt loop must stay put
         for i in 1 to 5 loop
             wait until falling_edge(clk);
-            assert to_integer(unsigned(PC)) = 4 * (ROM_SIZE - 1) report "left the halt loop" severity error;
+            assert to_integer(unsigned(PC)) = BASE + 4 * (ROM_SIZE - 1) report "left the halt loop" severity error;
         end loop;
         std.env.finish;
     end process;

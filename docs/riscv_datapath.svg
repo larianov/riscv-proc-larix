@@ -5,12 +5,13 @@
 <style>.t{font-family:"DejaVu Sans",Arial,sans-serif;paint-order:stroke;stroke:#fff;stroke-width:5px;stroke-linejoin:round}</style>
 </defs>
 <rect width="2410" height="1360" fill="#fff"/>
-<text x="60" y="1240" font-size="30" text-anchor="start" fill="#111" font-weight="700" class="t">RISC-V single-cycle core (cpu.vhd / core.vhd / DataPath.vhd)</text>
+<text x="60" y="1240" font-size="30" text-anchor="start" fill="#111" font-weight="700" class="t">RISC-V single-cycle core (core.vhd / DataPath.vhd)</text>
 <text x="60" y="1275" font-size="20" text-anchor="start" fill="#555" class="t">Control signals are blue; blocks that differ from the textbook design are bold with a blue fill.</text>
 <text x="60" y="1303" font-size="20" text-anchor="start" fill="#555" class="t">funct3 = instr[14:12],  addr[1:0] = ALUResult[1:0].</text>
 <text x="60" y="1331" font-size="20" text-anchor="start" fill="#555" class="t">lui: SrcA = 0 (ASrc=10), auipc: SrcA = PC (ASrc=01); both use SrcB = U-imm (ImmSrc=100).</text>
 <text x="1100" y="1275" font-size="21" text-anchor="start" fill="#1a73c8" class="t">PCSrc = Branch · (Zero ⊕ funct3[0] ⊕ funct3[2]) + Jump</text>
 <text x="1100" y="1303" font-size="19" text-anchor="start" fill="#1a73c8" class="t">(computed in controlblock.vhd from ControlUnit outputs)</text>
+<text x="1100" y="1331" font-size="20" text-anchor="start" fill="#555" class="t">Instruction / Data Memory = boot ROM + RAM behind the MMIO decoder: see riscv_soc.png</text>
 <rect x="640" y="40" width="160" height="375" rx="30" fill="none" stroke="#7a7a7a" stroke-width="5"/>
 <text x="720" y="85" font-size="24" text-anchor="middle" fill="#7a7a7a" font-weight="700" class="t">Control</text>
 <text x="720" y="115" font-size="24" text-anchor="middle" fill="#7a7a7a" font-weight="700" class="t">Block</text>
@@ -50,6 +51,7 @@
 <polyline points="240,660 240,590" fill="none" stroke="#7a7a7a" stroke-width="3" stroke-linejoin="round" marker-end="url(#ahg)"/>
 <polygon points="228,690 252,690 252,672 240,660 228,672" fill="none" stroke="#7a7a7a" stroke-width="5" stroke-linejoin="round"/>
 <text x="240" y="715" font-size="20" text-anchor="middle" fill="#555" class="t">rst</text>
+<text x="240" y="738" font-size="16" text-anchor="middle" fill="#555" class="t">→ 0x1000</text>
 <text x="270" y="525" font-size="22" text-anchor="start" fill="#555" class="t">PC</text>
 <polyline points="260,545 320,545" fill="none" stroke="#7a7a7a" stroke-width="3" stroke-linejoin="round"/>
 <rect x="320" y="480" width="160" height="240" rx="0" fill="none" stroke="#7a7a7a" stroke-width="5"/>

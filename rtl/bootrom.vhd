@@ -5,24 +5,25 @@ use std.textio.all;
 use ieee.std_logic_textio.all;
 
 
-entity instruction_memory is
+entity bootrom is
     generic(
-        file_S : string := "hex.hex";
-        size : positive := 32
+        file_S : string := "boot.hex";
+        size : positive := 64
     );
     port(
         PC : in std_logic_vector(31 downto 0);
+        address : in std_logic_vector(31 downto 0);
+        RD : out std_logic_vector(31 downto 0);
         instr_out : out std_logic_vector(31 downto 0)
     );
-end entity instruction_memory;
+end entity bootrom;
 
-
-architecture RTL of instruction_memory is
-    type instr_rom_t is array(0 to size-1) of std_logic_vector(31 downto 0);
+architecture RTL of bootrom is
+    type mem_arr is array(0 to size-1) of std_logic_vector(31 downto 0);
     signal PC_4 : integer := 0;
     impure function ParseFile(file_S : string)
-       return instr_rom_t is
-        variable loc_arr : instr_rom_t := (others => x"00000013");
+       return mem_arr is
+        variable loc_arr : mem_arr := (others => (others => '0'));
         variable ln: line;
         file f : text open READ_MODE is file_S;
         variable line_c : integer := 0;
@@ -42,15 +43,15 @@ architecture RTL of instruction_memory is
         return loc_arr;
     end function ParseFile;
 
-    constant rom_mem : instr_rom_t := ParseFile(file_S);
+    signal uni_mem : mem_arr := ParseFile(file_S);
 begin
-    PC_4 <= TO_INTEGER(SHIFT_RIGHT(UNSIGNED(PC), 2));
-    process(PC_4)
+    PC_4 <= TO_INTEGER(SHIFT_RIGHT((UNSIGNED(PC)), 2)) mod size;
+    process(PC_4, uni_mem)
     begin
-        if PC_4 < size then
-            instr_out <= rom_mem(PC_4);
-        else
-            instr_out <= x"00000013";
-        end if;
+        instr_out <= uni_mem(PC_4);
+    end process;
+    process(address, uni_mem)
+    begin
+        RD <= uni_mem( TO_INTEGER(SHIFT_RIGHT((UNSIGNED(address)), 2)) mod size);
     end process;
 end architecture RTL;

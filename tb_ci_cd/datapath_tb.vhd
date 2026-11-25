@@ -37,12 +37,12 @@ begin
         instr <= x"00500093"; AluSrcB <= '1'; RegWrite <= '1';
         wait until falling_edge(clk);
         assert REZ = x"00000005" report "addi x1 result wrong" severity error;
-        assert PC = x"00000004" report "PC should be 4" severity error;
+        assert PC = x"00001004" report "PC should be 0x1004 (reset vector 0x1000 + 4)" severity error;
 
         -- addi x2, x0, 7
         instr <= x"00700113";
         wait until falling_edge(clk);
-        assert PC = x"00000008" report "PC should be 8" severity error;
+        assert PC = x"00001008" report "PC should be 0x1008" severity error;
 
         -- add x3, x1, x2  -> 12
         instr <= x"002081B3"; AluSrcB <= '0';
@@ -56,15 +56,15 @@ begin
         wait for 1 ns;
         assert REZ = x"00000000" and Zero = '1' report "sub / Zero wrong" severity error;
 
-        -- taken branch: PC (now 0xC) + offset 8 = 0x14
+        -- taken branch: PC (now 0x100C) + offset 8 = 0x1014
         instr <= x"00008463"; ImmSrc <= "010"; PC_Src <= '1';  -- beq x1, x0, +8
         wait until falling_edge(clk);
-        assert PC = x"00000014" report "branch target wrong" severity error;
+        assert PC = x"00001014" report "branch target wrong" severity error;
 
-        -- jal-style jump: PC (now 0x14) + offset 8 = 0x1C
+        -- jal-style jump: PC (now 0x1014) + offset 8 = 0x101C
         instr <= x"008000EF"; ImmSrc <= "011"; PC_Src <= '1';
         wait until falling_edge(clk);
-        assert PC = x"0000001C" report "jal target wrong" severity error;
+        assert PC = x"0000101C" report "jal target wrong" severity error;
 
         -- jalr-style jump: target = (x1 + imm) with bit 0 cleared. x1 = 5, imm = 4 -> 9 -> 8
         instr <= x"00408167"; ImmSrc <= "000"; JalrReg <= '1'; AluSrcB <= '1';

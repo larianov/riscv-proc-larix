@@ -1,0 +1,186 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2200" height="1560" viewBox="0 0 2200 1560">
+<defs>
+<marker id="ag" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#666"/></marker>
+<marker id="ab" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1a73c8"/></marker>
+<marker id="ao" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#c26a00"/></marker>
+<style>.t{font-family:"DejaVu Sans",Arial,sans-serif;paint-order:stroke;stroke:#fff;stroke-width:6px;stroke-linejoin:round}</style>
+</defs>
+<rect width="2200" height="1560" fill="#fff"/>
+<text x="60" y="62" font-size="32" text-anchor="start" fill="#111" font-weight="700" class="t">cpu.vhd — top level: core, boot ROM, RAM, MMIO address decoder</text>
+<text x="60" y="96" font-size="20" text-anchor="start" fill="#555" class="t">Instructions come from the boot ROM or the RAM (picked by PC); loads read RAM, ROM or a peripheral (picked by address).</text>
+<rect x="80" y="150" width="270" height="960" rx="6" fill="#f4f4f4" stroke="#111" stroke-width="5"/>
+<text x="200" y="780" font-size="34" text-anchor="middle" fill="#111" font-weight="700" class="t">core</text>
+<text x="200" y="812" font-size="18" text-anchor="middle" fill="#555" class="t">core.vhd</text>
+<text x="200" y="840" font-size="16" text-anchor="middle" fill="#555" class="t">DataPath + controlblock</text>
+<text x="200" y="862" font-size="16" text-anchor="middle" fill="#555" class="t">+ Read/WriteBlock</text>
+<polyline points="20,200 80,200" fill="none" stroke="#666" stroke-width="3" stroke-linejoin="round" marker-end="url(#ag)"/>
+<text x="24" y="190" font-size="18" text-anchor="start" fill="#444" class="t">clk</text>
+<polyline points="20,250 80,250" fill="none" stroke="#666" stroke-width="3" stroke-linejoin="round" marker-end="url(#ag)"/>
+<text x="24" y="240" font-size="18" text-anchor="start" fill="#444" class="t">rst</text>
+<text x="340" y="207" font-size="20" text-anchor="end" fill="#444" class="t">PC</text>
+<text x="340" y="347" font-size="20" text-anchor="end" fill="#444" class="t">instr</text>
+<text x="340" y="567" font-size="20" text-anchor="end" fill="#444" class="t">rez</text>
+<text x="340" y="617" font-size="20" text-anchor="end" fill="#444" class="t">WD</text>
+<text x="340" y="667" font-size="20" text-anchor="end" fill="#444" class="t">WE[3:0]</text>
+<text x="340" y="982" font-size="20" text-anchor="end" fill="#444" class="t">ReadData</text>
+<polyline points="150,1110 150,1170" fill="none" stroke="#666" stroke-width="3" stroke-linejoin="round" marker-end="url(#ag)"/>
+<text x="150" y="1195" font-size="19" text-anchor="middle" fill="#444" class="t">Illegal</text>
+<polyline points="280,1110 280,1170" fill="none" stroke="#666" stroke-width="3" stroke-linejoin="round" marker-end="url(#ag)"/>
+<text x="280" y="1195" font-size="19" text-anchor="middle" fill="#444" class="t">RezOUT (= rez)</text>
+<polygon points="500,305 570,275 570,405 500,375" fill="#e8f1fb" stroke="#111" stroke-width="4" stroke-linejoin="round"/>
+<text x="535" y="265" font-size="19" text-anchor="middle" fill="#111" font-weight="700" class="t">interselmux</text>
+<text x="554" y="306" font-size="15" text-anchor="end" fill="#444" class="t">00</text>
+<text x="554" y="351" font-size="15" text-anchor="end" fill="#444" class="t">01</text>
+<text x="554" y="387" font-size="15" text-anchor="end" fill="#444" class="t">1x</text>
+<polyline points="500,340 350,340" fill="none" stroke="#666" stroke-width="3" stroke-linejoin="round" marker-end="url(#ag)"/>
+<text x="425" y="330" font-size="18" text-anchor="middle" fill="#444" class="t">instr</text>
+<polyline points="610,381 570,381" fill="none" stroke="#666" stroke-width="3" stroke-linejoin="round" marker-end="url(#ag)"/>
+<text x="618" y="388" font-size="20" text-anchor="start" fill="#444" class="t">0</text>
+<polygon points="500,925 590,845 590,1105 500,1025" fill="#e8f1fb" stroke="#111" stroke-width="4" stroke-linejoin="round"/>
+<text x="540" y="1135" font-size="19" text-anchor="middle" fill="#111" font-weight="700" class="t">ReadDatamux</text>
+<text x="570" y="875" font-size="14" text-anchor="end" fill="#444" class="t">000</text>
+<text x="570" y="910" font-size="14" text-anchor="end" fill="#444" class="t">001</text>
+<text x="570" y="945" font-size="14" text-anchor="end" fill="#444" class="t">010</text>
+<text x="570" y="980" font-size="14" text-anchor="end" fill="#444" class="t">011</text>
+<text x="570" y="1015" font-size="14" text-anchor="end" fill="#444" class="t">100</text>
+<text x="570" y="1050" font-size="14" text-anchor="end" fill="#444" class="t">101</text>
+<text x="570" y="1085" font-size="14" text-anchor="end" fill="#444" class="t">11x</text>
+<polyline points="500,975 350,975" fill="none" stroke="#666" stroke-width="3" stroke-linejoin="round" marker-end="url(#ag)"/>
+<polyline points="630,1080 590,1080" fill="none" stroke="#666" stroke-width="3" stroke-linejoin="round" marker-end="url(#ag)"/>
+<text x="636" y="1087" font-size="20" text-anchor="start" fill="#444" class="t">0</text>
+<rect x="650" y="440" width="300" height="275" rx="6" fill="#fff1dc" stroke="#c26a00" stroke-width="5"/>
+<text x="820" y="614" font-size="32" text-anchor="middle" fill="#c26a00" font-weight="700" class="t">MMIO</text>
+<text x="820" y="638" font-size="18" text-anchor="middle" fill="#c26a00" class="t">address decoder</text>
+<text x="820" y="660" font-size="16" text-anchor="middle" fill="#555" class="t">MMIO.vhd</text>
+<text x="662" y="507" font-size="17" text-anchor="start" fill="#444" class="t">PC</text>
+<text x="662" y="566" font-size="17" text-anchor="start" fill="#444" class="t">address</text>
+<text x="662" y="666" font-size="17" text-anchor="start" fill="#444" class="t">MemWrite</text>
+<text x="938" y="566" font-size="17" text-anchor="end" fill="#444" class="t">WE3M_1</text>
+<text x="938" y="696" font-size="15" text-anchor="end" fill="#444" class="t">WE3_2, We_3..5</text>
+<text x="690" y="464" font-size="15" text-anchor="middle" fill="#444" class="t">intersel</text>
+<text x="690" y="705" font-size="15" text-anchor="middle" fill="#444" class="t">RDsel</text>
+<rect x="1170" y="150" width="340" height="290" rx="6" fill="#e8f1fb" stroke="#111" stroke-width="4"/>
+<text x="1496" y="236" font-size="28" text-anchor="end" fill="#111" font-weight="700" class="t">Boot ROM</text>
+<text x="1496" y="268" font-size="15" text-anchor="end" fill="#555" class="t">bootrom.vhd · boot.hex</text>
+<text x="1496" y="290" font-size="15" text-anchor="end" fill="#555" class="t">64 words · read only</text>
+<text x="1496" y="318" font-size="15" text-anchor="end" fill="#555" font-family="DejaVu Sans Mono,monospace" class="t">0x0000_1000–</text>
+<text x="1496" y="338" font-size="15" text-anchor="end" fill="#555" font-family="DejaVu Sans Mono,monospace" class="t">0x0000_1FFF</text>
+<text x="1182" y="206" font-size="16" text-anchor="start" fill="#444" class="t">PC</text>
+<text x="1182" y="306" font-size="16" text-anchor="start" fill="#444" class="t">instr_out</text>
+<text x="1182" y="386" font-size="16" text-anchor="start" fill="#444" class="t">address</text>
+<text x="1182" y="426" font-size="16" text-anchor="start" fill="#444" class="t">RD</text>
+<rect x="1170" y="490" width="340" height="330" rx="6" fill="#e8f1fb" stroke="#111" stroke-width="4"/>
+<polygon points="1440,490 1470,490 1455,506" fill="none" stroke="#111" stroke-width="3"/>
+<text x="1455" y="480" font-size="16" text-anchor="middle" fill="#444" class="t">clk</text>
+<text x="1496" y="690" font-size="28" text-anchor="end" fill="#111" font-weight="700" class="t">RAM</text>
+<text x="1498" y="722" font-size="15" text-anchor="end" fill="#555" class="t">unifiedmem.vhd</text>
+<text x="1498" y="744" font-size="15" text-anchor="end" fill="#555" class="t">hex.hex · 128 words</text>
+<text x="1498" y="766" font-size="15" text-anchor="end" fill="#555" class="t">instr + data</text>
+<text x="1498" y="796" font-size="16" text-anchor="end" fill="#555" font-family="DejaVu Sans Mono,monospace" class="t">0x8000_0000–</text>
+<text x="1182" y="536" font-size="16" text-anchor="start" fill="#444" class="t">instr_out</text>
+<text x="1182" y="586" font-size="16" text-anchor="start" fill="#444" class="t">PC</text>
+<text x="1182" y="636" font-size="16" text-anchor="start" fill="#444" class="t">address</text>
+<text x="1182" y="686" font-size="16" text-anchor="start" fill="#444" class="t">WD</text>
+<text x="1182" y="736" font-size="16" text-anchor="start" fill="#444" class="t">WE</text>
+<text x="1182" y="796" font-size="16" text-anchor="start" fill="#444" class="t">RD</text>
+<rect x="1170" y="905" width="340" height="175" rx="6" fill="#fafafa" stroke="#999" stroke-width="3" stroke-dasharray="12 8"/>
+<text x="1340.0" y="1073" font-size="15" text-anchor="middle" fill="#777" class="t">not wired yet: read data = 0</text>
+<text x="1184" y="947" font-size="19" text-anchor="start" fill="#777" font-weight="700" class="t">UART</text>
+<polyline points="1170,940 590,940" fill="none" stroke="#999" stroke-width="3" stroke-linejoin="round" marker-end="url(#ag)" stroke-dasharray="10 7"/>
+<text x="1184" y="982" font-size="19" text-anchor="start" fill="#777" font-weight="700" class="t">PLIC</text>
+<polyline points="1170,975 590,975" fill="none" stroke="#999" stroke-width="3" stroke-linejoin="round" marker-end="url(#ag)" stroke-dasharray="10 7"/>
+<text x="1184" y="1017" font-size="19" text-anchor="start" fill="#777" font-weight="700" class="t">CLINT</text>
+<polyline points="1170,1010 590,1010" fill="none" stroke="#999" stroke-width="3" stroke-linejoin="round" marker-end="url(#ag)" stroke-dasharray="10 7"/>
+<text x="1184" y="1052" font-size="19" text-anchor="start" fill="#777" font-weight="700" class="t">GPIO</text>
+<polyline points="1170,1045 590,1045" fill="none" stroke="#999" stroke-width="3" stroke-linejoin="round" marker-end="url(#ag)" stroke-dasharray="10 7"/>
+<polyline points="350,200 1170,200" fill="none" stroke="#666" stroke-width="3" stroke-linejoin="round" marker-end="url(#ag)"/>
+<circle cx="1000" cy="200" r="6" fill="#666"/>
+<polyline points="1000,200 1000,580 1170,580" fill="none" stroke="#666" stroke-width="3" stroke-linejoin="round" marker-end="url(#ag)"/>
+<circle cx="620" cy="200" r="6" fill="#666"/>
+<polyline points="620,200 620,500 650,500" fill="none" stroke="#666" stroke-width="3" stroke-linejoin="round" marker-end="url(#ag)"/>
+<text x="395" y="190" font-size="18" text-anchor="start" fill="#444" class="t">PC</text>
+<polyline points="350,560 650,560" fill="none" stroke="#666" stroke-width="3" stroke-linejoin="round" marker-end="url(#ag)"/>
+<circle cx="610" cy="560" r="6" fill="#666"/>
+<polyline points="610,560 610,745 1035,745" fill="none" stroke="#666" stroke-width="3" stroke-linejoin="round"/>
+<polyline points="1035,745 1035,380 1170,380" fill="none" stroke="#666" stroke-width="3" stroke-linejoin="round" marker-end="url(#ag)"/>
+<circle cx="1035" cy="630" r="6" fill="#666"/>
+<polyline points="1035,630 1170,630" fill="none" stroke="#666" stroke-width="3" stroke-linejoin="round" marker-end="url(#ag)"/>
+<text x="380" y="550" font-size="18" text-anchor="start" fill="#444" class="t">address</text>
+<polyline points="350,610 590,610 590,775 1070,775 1070,680 1170,680" fill="none" stroke="#666" stroke-width="3" stroke-linejoin="round" marker-end="url(#ag)"/>
+<text x="380" y="600" font-size="18" text-anchor="start" fill="#444" class="t">WD</text>
+<polyline points="350,660 650,660" fill="none" stroke="#1a73c8" stroke-width="3" stroke-linejoin="round" marker-end="url(#ab)"/>
+<text x="380" y="650" font-size="18" text-anchor="start" fill="#1a73c8" class="t">WE[3:0]</text>
+<polyline points="1170,300 570,300" fill="none" stroke="#666" stroke-width="3" stroke-linejoin="round" marker-end="url(#ag)"/>
+<text x="960" y="292" font-size="16" text-anchor="end" fill="#444" class="t">instr (ROM)</text>
+<polyline points="1170,530 1110,530 1110,345 570,345" fill="none" stroke="#666" stroke-width="3" stroke-linejoin="round" marker-end="url(#ag)"/>
+<text x="960" y="337" font-size="16" text-anchor="end" fill="#444" class="t">instr (RAM)</text>
+<polyline points="1170,420 1145,420 1145,905 590,905" fill="none" stroke="#666" stroke-width="3" stroke-linejoin="round" marker-end="url(#ag)"/>
+<polyline points="1170,790 1125,790 1125,870 590,870" fill="none" stroke="#666" stroke-width="3" stroke-linejoin="round" marker-end="url(#ag)"/>
+<text x="960" y="862" font-size="16" text-anchor="end" fill="#444" class="t">RD (RAM)</text>
+<text x="960" y="897" font-size="16" text-anchor="end" fill="#444" class="t">RD (ROM)</text>
+<polyline points="690,440 690,425 535,425 535,397" fill="none" stroke="#1a73c8" stroke-width="3" stroke-linejoin="round" marker-end="url(#ab)"/>
+<text x="700" y="418" font-size="17" text-anchor="start" fill="#1a73c8" class="t">intersel[1:0]</text>
+<polyline points="690,715 690,812 515,812 515,905" fill="none" stroke="#1a73c8" stroke-width="3" stroke-linejoin="round" marker-end="url(#ab)"/>
+<text x="700" y="806" font-size="17" text-anchor="start" fill="#1a73c8" class="t">RDsel[2:0]</text>
+<polyline points="950,560 975,560 975,730 1170,730" fill="none" stroke="#1a73c8" stroke-width="3" stroke-linejoin="round" marker-end="url(#ab)"/>
+<polyline points="950,690 985,690" fill="none" stroke="#1a73c8" stroke-width="3" stroke-linejoin="round" stroke-dasharray="10 7"/>
+<text x="960" y="682" font-size="15" text-anchor="start" fill="#1a73c8" class="t">open</text>
+<text x="1000" y="135" font-size="1" text-anchor="start" fill="#444" class="t"></text>
+<line x1="60" y1="1220" x2="2140" y2="1220" stroke="#ddd" stroke-width="2"/>
+<text x="60" y="1250" font-size="24" text-anchor="start" fill="#111" font-weight="700" class="t">Boot</text>
+<text x="60" y="1290" font-size="18" text-anchor="start" fill="#555" font-family="DejaVu Sans Mono,monospace" class="t">reset</text>
+<text x="150" y="1290" font-size="18" text-anchor="start" fill="#111" font-family="DejaVu Sans Mono,monospace" class="t">PC = 0x0000_1000</text>
+<text x="60" y="1322" font-size="18" text-anchor="start" fill="#555" font-family="DejaVu Sans Mono,monospace" class="t">0x1000</text>
+<text x="150" y="1322" font-size="18" text-anchor="start" fill="#111" font-family="DejaVu Sans Mono,monospace" class="t">800002B7   lui  x5, 0x80000</text>
+<text x="60" y="1354" font-size="18" text-anchor="start" fill="#555" font-family="DejaVu Sans Mono,monospace" class="t">0x1004</text>
+<text x="150" y="1354" font-size="18" text-anchor="start" fill="#111" font-family="DejaVu Sans Mono,monospace" class="t">00028067   jalr x0, 0(x5)</text>
+<text x="60" y="1386" font-size="18" text-anchor="start" fill="#555" font-family="DejaVu Sans Mono,monospace" class="t">next</text>
+<text x="150" y="1386" font-size="18" text-anchor="start" fill="#111" font-family="DejaVu Sans Mono,monospace" class="t">PC = 0x8000_0000 → hex.hex in RAM</text>
+<text x="60" y="1440" font-size="17" text-anchor="start" fill="#555" class="t">interselmux: PC in ROM → 00, PC ≥ 0x8000_0000 → 01, else 1x → 0</text>
+<text x="60" y="1466" font-size="17" text-anchor="start" fill="#555" class="t">Address decode is combinational; RAM writes on the clock edge.</text>
+<text x="860" y="1250" font-size="24" text-anchor="start" fill="#111" font-weight="700" class="t">Memory map (MMIO.vhd)</text>
+<text x="860" y="1288" font-size="17" text-anchor="start" fill="#555" font-weight="700" class="t">Region</text>
+<text x="980" y="1288" font-size="17" text-anchor="start" fill="#555" font-weight="700" class="t">Address range</text>
+<text x="1380" y="1288" font-size="17" text-anchor="start" fill="#555" font-weight="700" class="t">RDsel</text>
+<text x="1480" y="1288" font-size="17" text-anchor="start" fill="#555" font-weight="700" class="t">Write enable</text>
+<rect x="850" y="1299" width="1290" height="30" fill="#f5f7fa"/>
+<text x="860" y="1320" font-size="17" text-anchor="start" fill="#111" font-weight="700" class="t">RAM</text>
+<text x="980" y="1320" font-size="17" text-anchor="start" fill="#111" font-family="DejaVu Sans Mono,monospace" class="t">0x8000_0000 – 0xFFFF_FFFF</text>
+<text x="1380" y="1320" font-size="17" text-anchor="start" fill="#111" font-family="DejaVu Sans Mono,monospace" class="t">000</text>
+<text x="1480" y="1320" font-size="17" text-anchor="start" fill="#111" class="t">WE3M_1 → RAM</text>
+<text x="860" y="1350" font-size="17" text-anchor="start" fill="#111" font-weight="700" class="t">ROM</text>
+<text x="980" y="1350" font-size="17" text-anchor="start" fill="#111" font-family="DejaVu Sans Mono,monospace" class="t">0x0000_1000 – 0x0000_1FFF</text>
+<text x="1380" y="1350" font-size="17" text-anchor="start" fill="#111" font-family="DejaVu Sans Mono,monospace" class="t">001</text>
+<text x="1480" y="1350" font-size="17" text-anchor="start" fill="#111" class="t">none (read only)</text>
+<rect x="850" y="1359" width="1290" height="30" fill="#f5f7fa"/>
+<text x="860" y="1380" font-size="17" text-anchor="start" fill="#111" font-weight="700" class="t">UART</text>
+<text x="980" y="1380" font-size="17" text-anchor="start" fill="#111" font-family="DejaVu Sans Mono,monospace" class="t">0x1000_0000 – 0x1000_00FF</text>
+<text x="1380" y="1380" font-size="17" text-anchor="start" fill="#111" font-family="DejaVu Sans Mono,monospace" class="t">010</text>
+<text x="1480" y="1380" font-size="17" text-anchor="start" fill="#111" class="t">WE3_2 (open)</text>
+<text x="860" y="1410" font-size="17" text-anchor="start" fill="#111" font-weight="700" class="t">PLIC</text>
+<text x="980" y="1410" font-size="17" text-anchor="start" fill="#111" font-family="DejaVu Sans Mono,monospace" class="t">0x0C00_0000 – 0x0FFF_FFFF</text>
+<text x="1380" y="1410" font-size="17" text-anchor="start" fill="#111" font-family="DejaVu Sans Mono,monospace" class="t">011</text>
+<text x="1480" y="1410" font-size="17" text-anchor="start" fill="#111" class="t">We_3 (open)</text>
+<rect x="850" y="1419" width="1290" height="30" fill="#f5f7fa"/>
+<text x="860" y="1440" font-size="17" text-anchor="start" fill="#111" font-weight="700" class="t">CLINT</text>
+<text x="980" y="1440" font-size="17" text-anchor="start" fill="#111" font-family="DejaVu Sans Mono,monospace" class="t">0x0200_0000 – 0x0200_FFFF</text>
+<text x="1380" y="1440" font-size="17" text-anchor="start" fill="#111" font-family="DejaVu Sans Mono,monospace" class="t">100</text>
+<text x="1480" y="1440" font-size="17" text-anchor="start" fill="#111" class="t">We_4 (open)</text>
+<text x="860" y="1470" font-size="17" text-anchor="start" fill="#111" font-weight="700" class="t">GPIO</text>
+<text x="980" y="1470" font-size="17" text-anchor="start" fill="#111" font-family="DejaVu Sans Mono,monospace" class="t">0x1000_1000</text>
+<text x="1380" y="1470" font-size="17" text-anchor="start" fill="#111" font-family="DejaVu Sans Mono,monospace" class="t">101</text>
+<text x="1480" y="1470" font-size="17" text-anchor="start" fill="#111" class="t">We_5 (open)</text>
+<rect x="850" y="1479" width="1290" height="30" fill="#f5f7fa"/>
+<text x="860" y="1500" font-size="17" text-anchor="start" fill="#111" font-weight="700" class="t">other</text>
+<text x="980" y="1500" font-size="17" text-anchor="start" fill="#111" font-family="DejaVu Sans Mono,monospace" class="t">anything else</text>
+<text x="1380" y="1500" font-size="17" text-anchor="start" fill="#111" font-family="DejaVu Sans Mono,monospace" class="t">101</text>
+<text x="1480" y="1500" font-size="17" text-anchor="start" fill="#111" class="t">none</text>
+<polyline points="1720,140 1770,140" fill="none" stroke="#666" stroke-width="3" stroke-linejoin="round"/>
+<text x="1780" y="146" font-size="16" text-anchor="start" fill="#444" class="t">32-bit data</text>
+<polyline points="1720,168 1770,168" fill="none" stroke="#1a73c8" stroke-width="3" stroke-linejoin="round"/>
+<text x="1780" y="174" font-size="16" text-anchor="start" fill="#444" class="t">select / write enable</text>
+<polyline points="1720,196 1770,196" fill="none" stroke="#999" stroke-width="3" stroke-linejoin="round" stroke-dasharray="10 7"/>
+<text x="1780" y="202" font-size="16" text-anchor="start" fill="#444" class="t">not connected yet</text>
+<circle cx="1745" cy="224" r="6" fill="#666"/>
+<text x="1780" y="230" font-size="16" text-anchor="start" fill="#444" class="t">branch (no dot = crossing)</text>
+</svg>

@@ -27,10 +27,10 @@ begin
 
     process
     begin
-        -- pc: reset to 0, then loads PCNext every clock, reset wins
+        -- pc: reset to 0x1000 (boot ROM), then loads PCNext every clock, reset wins
         pc_next <= x"12345678";
         wait until falling_edge(clk);
-        assert pc_reg = x"00000000" report "pc must be 0 during reset" severity error;
+        assert pc_reg = x"00001000" report "pc must be 0x1000 during reset" severity error;
         rst <= '0';
         wait until falling_edge(clk);
         assert pc_reg = x"12345678" report "pc must load PCNext" severity error;
@@ -39,7 +39,7 @@ begin
         assert pc_reg = x"0000ABCD" report "pc must follow PCNext" severity error;
         rst <= '1';
         wait until falling_edge(clk);
-        assert pc_reg = x"00000000" report "reset must clear pc" severity error;
+        assert pc_reg = x"00001000" report "reset must put pc back to 0x1000" severity error;
         rst <= '0';
 
         -- PCPlus4

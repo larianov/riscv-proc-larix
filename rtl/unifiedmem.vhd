@@ -51,14 +51,10 @@ architecture RTL of unifiedmem is
 
     signal uni_mem : mem_arr := ParseFile(file_S);
 begin
-    PC_4 <= TO_INTEGER(SHIFT_RIGHT(UNSIGNED(PC), 2));
+    PC_4 <= TO_INTEGER(SHIFT_RIGHT((UNSIGNED(PC)), 2)) mod size;
     process(PC_4, uni_mem)
     begin
-        if PC_4 < size then
-            instr_out <= uni_mem(PC_4);
-        else
-            instr_out <= (others => '0');
-        end if;
+        instr_out <= uni_mem(PC_4);
     end process;
     process(clk)
         variable temp_we : std_logic_vector(31 downto 0) := (others => '0');    
