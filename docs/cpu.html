@@ -1,0 +1,1310 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RISC-V single-cycle CPU — interactive schematic</title>
+<style>
+:root{
+  --bg:#f6f7f9; --panel:#ffffff; --ink:#16181d; --muted:#5d6470; --line:#d9dde3;
+  --wire:#6b7280; --ctrl:#1f6fd1; --clk:#9aa1ab; --on:#e0532b; --onctrl:#1f6fd1;
+  --blk:#ffffff; --blkline:#2a2f38;
+  --g-DataPath:#e7f0fd; --g-controlblock:#efe8fb; --g-core:#e4f5f0; --g-cpu:#fdf0e3; --g-port:#ffffff;
+  --chip:#eef0f3; --badge:#ffffff; --hl:#f4b400;
+  font-family: ui-sans-serif, system-ui, "Segoe UI", "DejaVu Sans", Arial, sans-serif;
+}
+[data-theme=dark]{
+  --bg:#111318; --panel:#1a1d24; --ink:#e7e9ee; --muted:#9aa2b1; --line:#2c313b;
+  --wire:#8b93a1; --ctrl:#5aa2ff; --clk:#5d6573; --on:#ff7a4d; --onctrl:#6fb0ff;
+  --blk:#1d2129; --blkline:#c9ced8;
+  --g-DataPath:#1c2a3f; --g-controlblock:#2a2140; --g-core:#173029; --g-cpu:#352617; --g-port:#1d2129;
+  --chip:#232833; --badge:#1a1d24; --hl:#f4b400;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink)}
+body{display:grid;grid-template-columns:330px 1fr;grid-template-rows:52px 1fr;height:100vh;overflow:hidden}
+header{grid-column:1/3;display:flex;align-items:center;gap:14px;padding:0 14px;border-bottom:1px solid var(--line);background:var(--panel)}
+header h1{font-size:15px;margin:0;font-weight:650;white-space:nowrap}
+header .crumbs{display:flex;gap:4px;align-items:center}
+button,select,input{font:inherit;color:inherit}
+.btn{border:1px solid var(--line);background:var(--panel);border-radius:7px;padding:5px 10px;cursor:pointer;font-size:13px}
+.btn:hover{border-color:var(--muted)}
+.btn.on{background:var(--ink);color:var(--panel);border-color:var(--ink)}
+.spacer{flex:1}
+#search{width:220px;border:1px solid var(--line);background:var(--bg);border-radius:7px;padding:6px 9px;font-size:13px}
+#results{position:absolute;top:46px;right:150px;width:300px;max-height:60vh;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 30px rgba(0,0,0,.15);display:none;z-index:20}
+#results div{padding:7px 10px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--line)}
+#results div:hover{background:var(--chip)}
+#results small{color:var(--muted)}
+aside{border-right:1px solid var(--line);background:var(--panel);overflow:auto;padding:12px 14px 30px}
+aside h2{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:18px 0 8px}
+aside h2:first-child{margin-top:4px}
+#asm{width:100%;border:1px solid var(--line);background:var(--bg);border-radius:7px;padding:7px 9px;font:13px ui-monospace,SFMono-Regular,Menlo,monospace}
+.err{color:#d33;font-size:12px;min-height:16px;margin-top:4px}
+.ctx{display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;font-size:12.5px;margin-top:6px}
+.ctx label{display:flex;gap:6px;align-items:center}
+.ctx select{border:1px solid var(--line);background:var(--bg);border-radius:5px;padding:1px 4px;font-size:12px}
+#decoded{font:12px ui-monospace,Menlo,monospace;color:var(--muted);margin-top:6px;white-space:pre-wrap;line-height:1.45}
+.story{display:block;width:100%;text-align:left;border:1px solid transparent;background:none;border-radius:7px;padding:6px 8px;cursor:pointer;font-size:13px}
+.story:hover{background:var(--chip)}
+.story.on{border-color:var(--ink)}
+.story small{display:block;color:var(--muted);font-size:11.5px}
+.legend{font-size:12.5px;display:grid;gap:5px}
+.legend div{display:flex;gap:8px;align-items:center;cursor:default}
+.legend .grp{cursor:pointer;border-radius:5px;padding:1px 3px}
+.legend .grp:hover{background:var(--chip)}
+.sw{width:26px;height:0;border-top:3px solid var(--wire)}
+.sw.c{border-top:2px solid var(--ctrl)} .sw.k{border-top:2px dashed var(--clk)}
+.sq{width:16px;height:12px;border:1.5px solid var(--blkline);border-radius:3px}
+main{position:relative;overflow:hidden;grid-column:2;grid-row:2}
+svg#cv{width:100%;height:100%;display:block;cursor:grab;user-select:none}
+svg#cv.drag{cursor:grabbing}
+#zoom{position:absolute;right:14px;bottom:14px;display:flex;gap:6px}
+#caption{position:absolute;left:14px;bottom:14px;max-width:min(640px,calc(100% - 200px));background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 14px;box-shadow:0 6px 24px rgba(0,0,0,.12);display:none;font-size:13.5px;line-height:1.5}
+#caption .t{font-weight:650;margin-bottom:4px;display:flex;gap:10px;align-items:center}
+#caption .t span{flex:1}
+#caption code{font-size:12.5px}
+#card{position:absolute;top:12px;right:12px;width:380px;max-height:calc(100% - 24px);overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 30px rgba(0,0,0,.15);display:none;font-size:13px;line-height:1.45}
+#card .hd{position:sticky;top:0;background:var(--panel);padding:12px 14px 8px;border-bottom:1px solid var(--line);display:flex;gap:8px;align-items:flex-start}
+#card .hd h3{margin:0;font-size:16px;flex:1}
+#card .hd .x{cursor:pointer;border:none;background:none;font-size:18px;line-height:1;color:var(--muted)}
+#card .bd{padding:10px 14px 14px}
+#card .meta{color:var(--muted);font-size:12px;margin-top:2px;font-weight:400}
+#card table{border-collapse:collapse;width:100%;font-size:12px;margin:6px 0 10px}
+#card td,#card th{border-bottom:1px solid var(--line);padding:3px 4px;text-align:left;vertical-align:top}
+#card th{color:var(--muted);font-weight:600}
+#card td.v{font-family:ui-monospace,Menlo,monospace;color:var(--on)}
+#card h4{margin:12px 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+#card a{color:var(--ctrl)}
+.chip{display:inline-block;background:var(--chip);border-radius:5px;padding:0 6px;font-size:11.5px;margin-right:4px}
+code{font-family:ui-monospace,Menlo,monospace;background:var(--chip);border-radius:4px;padding:0 3px}
+#tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--panel);font-size:12px;padding:4px 8px;border-radius:6px;display:none;white-space:nowrap;z-index:30}
+
+/* diagram */
+.frame{fill:none;stroke:var(--line);stroke-width:2;stroke-dasharray:8 6}
+.frame-t{fill:var(--muted);font-size:20px;font-weight:650}
+.blk .b{stroke:var(--blkline);stroke-width:2.2}
+.blk .t{fill:var(--ink);font-size:17px;font-weight:650;text-anchor:middle;dominant-baseline:middle;pointer-events:none}
+.blk .e{fill:var(--muted);font-size:11.5px;text-anchor:middle;pointer-events:none}
+.blk .p{fill:var(--muted);font-size:11px;pointer-events:none}
+.blk .code{fill:var(--muted);font-size:11px;pointer-events:none}
+.blk{cursor:pointer}
+.blk:hover .b{stroke-width:3.2}
+.blk.sel .b{stroke:var(--hl);stroke-width:3.6}
+.blk.match .b{stroke:var(--hl);stroke-width:4}
+.w path,.w line{fill:none;stroke:var(--wire);stroke-width:1.8;stroke-linejoin:round;stroke-linecap:round}
+.w.bus path{stroke-width:3}
+.w.ctrl path,.w.ctrl line{stroke:var(--ctrl)}
+.w.clk path,.w.clk line{stroke:var(--clk);stroke-dasharray:5 4}
+.w.konst line{stroke:var(--clk)}
+.w.open line{stroke:var(--clk);stroke-dasharray:3 3}
+.w .hit{stroke:transparent!important;stroke-width:12!important;stroke-dasharray:none!important;cursor:pointer}
+.w circle{fill:var(--wire)} .w.ctrl circle{fill:var(--ctrl)}
+.w text{fill:var(--muted);font-size:12px}
+.w.ctrl text{fill:var(--ctrl)}
+.w.hl path:not(.hit),.w.hl line{stroke:var(--hl)!important;stroke-width:4!important}
+.arrow{fill:var(--wire)} .w.ctrl .arrow{fill:var(--ctrl)}
+.tracing .w:not(.on),.tracing .w .off{opacity:.16}
+.tracing .blk:not(.on){opacity:.38}
+.tracing .w.on path:not(.hit),.tracing .w.on line{stroke:var(--on)}
+.tracing .w.on.bus path:not(.hit){stroke-width:4}
+.tracing .w.on circle,.tracing .w.on .arrow{fill:var(--on)}
+.tracing .w.on.ctrl path:not(.hit){stroke:var(--onctrl);stroke-width:2.8}
+.tracing .w.on.ctrl circle,.tracing .w.on.ctrl .arrow{fill:var(--onctrl)}
+.tracing .blk.on .b{stroke-width:3}
+.badge rect{fill:var(--badge);stroke:var(--ctrl);stroke-width:1.2}
+.badge text{fill:var(--ctrl);font:600 12px ui-monospace,Menlo,monospace;dominant-baseline:middle}
+.badge.off{opacity:.45}
+.badge.d rect{stroke:var(--on)} .badge.d text{fill:var(--on)}
+body.bare{grid-template-columns:0 1fr;grid-template-rows:0 1fr}
+body.bare aside,body.bare header,body.bare #zoom{display:none}
+</style>
+</head>
+<body>
+<header>
+  <h1>RISC-V single-cycle CPU</h1>
+  <div class="crumbs" id="crumbs"></div>
+  <div class="spacer"></div>
+  <input id="search" placeholder="Search blocks, signals…  ( / )" autocomplete="off">
+  <div id="results"></div>
+  <button class="btn" id="theme" title="Light / dark (T)">◐</button>
+  <button class="btn" id="export" title="Download the current view as SVG">SVG ↓</button>
+</header>
+<aside>
+  <h2>Decode an instruction</h2>
+  <input id="asm" placeholder="lw x5, 8(x2)   or   0x00812283" spellcheck="false">
+  <div class="err" id="asmErr"></div>
+  <div class="ctx">
+    <label><input type="checkbox" id="cTaken"> branch taken</label>
+    <label><input type="checkbox" id="cIrq"> irq = 1</label>
+    <label><input type="checkbox" id="cMie"> mstatus.MIE</label>
+    <label><input type="checkbox" id="cMeie"> mie.MEIE</label>
+    <label>PC in <select id="cPc"><option value="ram">RAM</option><option value="rom">boot ROM</option><option value="none">unmapped</option></select></label>
+    <label>data in <select id="cMem"><option value="ram">RAM</option><option value="rom">boot ROM</option><option value="uart">UART</option><option value="plic">PLIC</option><option value="clint">CLINT</option><option value="gpio">GPIO</option><option value="other">unmapped</option></select></label>
+  </div>
+  <div id="decoded"></div>
+  <div style="margin-top:8px;display:flex;gap:6px"><button class="btn" id="clear">Clear highlight</button></div>
+  <h2>Walkthroughs</h2>
+  <div id="stories"></div>
+  <h2>Legend</h2>
+  <div class="legend" id="legend"></div>
+  <h2>Keys</h2>
+  <div style="font-size:12.5px;color:var(--muted);line-height:1.6">Drag to pan, wheel to zoom, <code>F</code> fit, <code>/</code> search, <code>←</code><code>→</code> walkthrough steps, <code>Esc</code> close. Double-click <b>core</b> to open it. Click a wire to see where it goes.</div>
+</aside>
+<main>
+  <svg id="cv" xmlns="http://www.w3.org/2000/svg"><defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="11" markerHeight="11" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path class="arrow" d="M0,0 L10,5 L0,10 z"/></marker>
+  </defs><g id="vp"></g></svg>
+  <div id="zoom"><button class="btn" id="zin">+</button><button class="btn" id="zout">−</button><button class="btn" id="zfit">Fit</button></div>
+  <div id="caption"></div>
+  <div id="card"></div>
+  <div id="tip"></div>
+</main>
+
+<!-- ================================================================ MODEL
+  Source of truth for the drawing. tb_ci_cd/check_docs.js checks it against rtl/*.vhd:
+  entity ports, every drawn wire = a real RTL net, every RTL connection drawn.
+  Pins: per side, "name" (spread evenly) or "name@offset". Wire paths: start pin or "@x,y" junction,
+  then "x:N" / "y:N" moves, then the end pin ("#text" = label at the end). -->
+<script type="application/json" id="model">
+{
+"entities": {
+  "cpu": {"file":"rtl/cpu.vhd","ports":[["clk","in",1],["rst","in",1],["Illegal","out",1],["irq","in",1],["RezOUT","out",32]],
+    "desc":"Top level: the core, the boot ROM, the unified RAM, the MMIO address decoder and the two muxes that pick where instructions and load data come from.","tests":["cpu_boot_tb","tb_uni/cpu_fib_tb"]},
+  "core": {"file":"rtl/core.vhd","ports":[["rst","in",1],["clk","in",1],["irq","in",1],["instr","in",32],["PC","out",32],["Illegal","out",1],["rez","out",32],["OUT_OF_MEMORY_DATA","in",32],["WD","out",32],["WE","out",4]],
+    "desc":"The single-cycle core: <b>DataPath</b> + <b>controlblock</b> + <b>WriteBlock</b> / <b>ReadBlock</b>. Fetch goes out on <code>PC</code> / <code>instr</code>, data on <code>rez</code> (address), <code>WD</code>, <code>WE[3:0]</code> and <code>OUT_OF_MEMORY_DATA</code>. Double-click to open.","tests":["core_tb","core_irq_tb"],"drill":"core","deps":{"*":[]}},
+  "DataPath": {"file":"rtl/DataPath.vhd","ports":[["clk","in",1],["rst","in",1],["PC_Src","in",2],["ImmSrc","in",3],["instr","in",32],["AluSrcB","in",1],["AluSRCA","in",2],["alu_control","in",4],["RegWrite","in",1],["Zero","out",1],["REZ","out",32],["PC","out",32],["ReadData","in",32],["Result_Src","in",2],["WD","out",32],["JalrReg","in",1],["TRAP","in",1],["CSRwrite","in",1],["CSRop","in",2],["MIE","out",1],["MEIE","out",1],["MRET","in",1],["irq","in",1]],
+    "desc":"All 32-bit datapath blocks (blue tint in the core view). <code>WD</code> = RD2, <code>REZ</code> = ALU result, <code>PC</code> = PC register.","tests":["datapath_tb"]},
+  "controlblock": {"file":"rtl/controlblock.vhd","ports":[["instr","in",32],["zero","in",1],["Illegal","out",1],["RegWrite","out",1],["ASrc","out",2],["BSrc","out",1],["ImmSrc","out",3],["alu_control","out",4],["PCsrc","out",2],["Result_Src","out",2],["Mem_Write","out",1],["irq","in",1],["MIE","in",1],["MEIE","in",1],["TRAP","out",1],["CSRop","out",2],["CSWrite","out",1],["MRET","out",1],["JalrReg","out",1]],
+    "desc":"ControlUnit plus the logic around it (violet tint): the interrupt gate <code>TRAP = irq·MIE·MEIE</code>, the two gates that cancel RegWrite / MemWrite on a trap, and the PCSrc priority logic.","tests":["controlblock_tb"]},
+  "ControlUnit": {"file":"rtl/ControlUnit.vhd","ports":[["opcode","in",7],["funct3","in",3],["funct7","in",7],["RegWrite","out",1],["ASrc","out",2],["BSrc","out",1],["Illegal","out",1],["Branch","out",1],["ImmSrc","out",3],["Mem_Write","out",1],["Result_Src","out",2],["alu_control","out",4],["rs1","in",5],["CSRwrite","out",1],["CSRop","out",2],["MRET","out",1],["JalrReg","out",1],["Jump","out",1]],
+    "desc":"Combinational decoder. Every output is 0 unless the instruction needs it; an unsupported instruction raises only <code>Illegal</code> and so runs as a no-op. <code>rs1</code> is only used to suppress the CSR write of <code>csrrs</code>/<code>csrrc</code> with <code>rs1 = x0</code>. Type an instruction in the left panel to see its outputs.","tests":["controlunit_tb (all 131 072 opcode/funct3/funct7 combinations)"],
+    "enc":[["ImmSrc","000 I, 001 S, 010 B, 011 J, 100 U"],["ASrc","00 RD1, 01 PC, 10 zero"],["BSrc","0 RD2, 1 ImmExt"],["Result_Src","00 ALU, 01 load, 10 PC+4, 11 CSR"],["CSRop","01 write, 10 set, 11 clear"],["alu_control","see alu"]]},
+  "WriteBlock": {"file":"rtl/WriteBlock.vhd","ports":[["rd2","in",32],["addr_2_bits","in",2],["Mem_Write","in",1],["funct3","in",3],["WE","out",4],["wD","out",32]],
+    "desc":"Store formatting. Byte enables from funct3 and the two low address bits; the byte / half-word of rs2 is copied into every lane of <code>wD</code> so the enabled lane gets it. Misaligned <code>sh</code>/<code>sw</code> → <code>WE = 0000</code> (nothing is written).","tests":["writeblock_tb"],
+    "enc":[["sw @00","WE 1111"],["sh @00 / @10","0011 / 1100"],["sb @00..@11","0001, 0010, 0100, 1000"]],
+    "deps":{"WE":["Mem_Write","addr_2_bits","funct3"],"wD":["rd2","funct3"]}},
+  "ReadBlock": {"file":"rtl/ReadBlock.vhd","ports":[["Memory_Data","in",32],["addr_2_bits","in",2],["funct3","in",3],["ReadData","out",32]],
+    "desc":"Load formatting: takes the byte / half / word at the low address bits out of the 32-bit memory word and sign- or zero-extends it by funct3. Misaligned <code>lh</code>/<code>lhu</code>/<code>lw</code> → 0.","tests":["readblock_tb"],
+    "enc":[["lb / lbu","byte, sign / zero extended"],["lh / lhu","half at @00 or @10"],["lw","word at @00"]]},
+  "pc": {"file":"rtl/pc.vhd","ports":[["clk","in",1],["rst","in",1],["PCNext","in",32],["PC_REG","out",32]],
+    "desc":"The PC register. Loads <code>PCNext</code> on every rising edge; synchronous reset to <code>0x0000_1000</code>, the start of the boot ROM.","tests":["small_blocks_tb"],"deps":{"PC_REG":[]}},
+  "PCPlus4": {"file":"rtl/PCPlus4.vhd","ports":[["PC","in",32],["PC_O","out",32]],"desc":"PC + 4.","tests":["small_blocks_tb"]},
+  "MuxJalr": {"file":"rtl/MuxJalr.vhd","ports":[["PC_NOW","in",32],["RD1","in",32],["JalrReg","in",1],["PCtarget_IN","out",32]],
+    "desc":"Base for the jump target: PC for branches and <code>jal</code>, rs1 for <code>jalr</code>.","tests":["small_blocks_tb","datapath_tb","core_tb"],"enc":[["JalrReg = 0","PC"],["JalrReg = 1","RD1 (rs1)"]]},
+  "PCTarget": {"file":"rtl/PCTarget.vhd","ports":[["PC","in",32],["offset","in",32],["PCOFFSET","out",32]],"desc":"Jump / branch target = base + ImmExt.","tests":["small_blocks_tb"]},
+  "ZeroGen": {"file":"rtl/ZeroGen.vhd","ports":[["INP","in",32],["OUTP","out",32]],"desc":"Clears bit 0 of the target. Required by <code>jalr</code>; branch and <code>jal</code> targets are even anyway.","tests":["small_blocks_tb","datapath_tb"]},
+  "Pc_mux": {"file":"rtl/Pc_mux.vhd","ports":[["PCPlus4","in",32],["PCL","in",32],["mtvec_handler_addr","in",32],["mepc_ret_addr","in",32],["S","in",2],["PCOUT","out",32]],
+    "desc":"Next PC.","tests":["small_blocks_tb"],"enc":[["00","PC + 4"],["01","branch / jump target"],["10","mtvec (interrupt)"],["11","mepc (mret)"]]},
+  "riscvregfile": {"file":"rtl/riscvregfile.vhd","ports":[["clk","in",1],["read_idx_second","in",5],["read_idx_first","in",5],["write_idx","in",5],["read_out_first","out",32],["read_out_second","out",32],["write_en","in",1],["write_In","in",32]],
+    "desc":"32 × 32-bit registers. Two asynchronous read ports (rs1, rs2), one write port on the rising edge. Writes to <code>x0</code> are ignored, so it always reads 0.","tests":["riscvregfile_tb"],
+    "deps":{"read_out_first":["read_idx_first"],"read_out_second":["read_idx_second"]}},
+  "ImmGen": {"file":"rtl/ImmGen.vhd","ports":[["imm","in",32],["imm_src","in",3],["imm_out","out",32]],
+    "desc":"Builds the sign-extended immediate from the instruction bits.","tests":["immgen_tb"],"enc":[["000","I: instr[31:20]"],["001","S: instr[31:25], [11:7]"],["010","B: branch offset, bit 0 = 0"],["011","J: jal offset, bit 0 = 0"],["100","U: instr[31:12] << 12"]]},
+  "SrcAMux": {"file":"rtl/SrcAMux.vhd","ports":[["SrcA","in",32],["PC","in",32],["S","in",2],["Y","out",32]],
+    "desc":"ALU input A.","tests":["small_blocks_tb"],"enc":[["00","RD1 (rs1)"],["01","PC (auipc)"],["10","0 (lui)"]]},
+  "alu_mux": {"file":"rtl/alu_mux.vhd","ports":[["rd2","in",32],["imm","in",32],["S","in",1],["muxout","out",32]],
+    "desc":"ALU input B.","tests":["small_blocks_tb"],"enc":[["0","RD2 (rs2)"],["1","ImmExt"]]},
+  "alu": {"file":"rtl/alu.vhd","ports":[["A_input","in",32],["B_input","in",32],["alu_control","in",4],["res_out","out",32],["Z","out",1]],
+    "desc":"32-bit ALU. <code>Z</code> = 1 when the result is 0; the branch decision uses it (sub for beq/bne, slt/sltu for the rest). Shift amount = B[4:0].","tests":["alu_tb"],
+    "enc":[["0000","add"],["1000","sub"],["0001","sll"],["0010","slt (signed)"],["0011","sltu"],["0100","xor"],["0101","srl"],["1101","sra"],["0110","or"],["0111","and"]]},
+  "CSRblock": {"file":"rtl/CSRblock.vhd","ports":[["clk","in",1],["rst","in",1],["w_DATA","in",32],["mtvec_handler_addr","out",32],["mepc_ret_addr_in","in",32],["mepc_ret_addr_out","out",32],["TRAP","in",1],["CSRwrite","in",1],["CSROp","in",2],["CSRnum","in",12],["irq","in",1],["MIE","out",1],["MEIE","out",1],["MRET","in",1],["CSR_RES","out",32]],
+    "desc":"Machine-mode CSRs. <code>CSR_RES</code> is the old value of CSR <code>instr[31:20]</code> (goes to rd). On the clock edge, in priority order: <b>TRAP</b>: mepc ← PC, mcause ← 0x8000_000B, MPIE ← MIE, MIE ← 0. <b>MRET</b>: MIE ← MPIE, MPIE ← 1. <b>CSRwrite</b>: CSR ← rs1 / old | rs1 / old & ~rs1. Unknown CSRs read 0. Everything resets to 0.",
+    "tests":["csrblock_tb","core_irq_tb"],
+    "enc":[["0x300 mstatus","bit 3 MIE, bit 7 MPIE"],["0x304 mie","bit 11 MEIE"],["0x305 mtvec","handler address"],["0x341 mepc","return address"],["0x342 mcause","0x8000_000B after a trap"],["0x344 mip","bit 11 = irq (read only)"]],
+    "deps":{"CSR_RES":["CSRnum"],"mtvec_handler_addr":[],"mepc_ret_addr_out":[],"MIE":[],"MEIE":[]}},
+  "result_mux": {"file":"rtl/result_mux.vhd","ports":[["Result_Src","in",2],["ReadData","in",32],["ALU_Res","in",32],["PC_4","in",32],["CSR_RES","in",32],["Mux_Res","out",32]],
+    "desc":"What is written to rd.","tests":["small_blocks_tb","datapath_tb"],"enc":[["00","ALU result"],["01","load data"],["10","PC + 4 (jal / jalr)"],["11","old CSR value"]]},
+  "bootrom": {"file":"rtl/bootrom.vhd","ports":[["PC","in",32],["address","in",32],["RD","out",32],["instr_out","out",32]],
+    "desc":"64-word ROM loaded from <code>boot.hex</code>: <code>lui x5, 0x80000</code> ; <code>jalr x0, 0(x5)</code>, i.e. jump to RAM. Two asynchronous read ports (instruction by PC, data by address); index = address / 4 mod 64.","tests":["bootrom_tb"],
+    "deps":{"instr_out":["PC"],"RD":["address"]}},
+  "unifiedmem": {"file":"rtl/unifiedmem.vhd","ports":[["PC","in",32],["instr_out","out",32],["clk","in",1],["address","in",32],["wD","in",32],["WE","in",4],["RD","out",32]],
+    "desc":"128-word RAM loaded from <code>hex.hex</code>, holds both program and data. Asynchronous instruction and data reads, byte-enable write on the rising edge; index = address / 4 mod 128.","tests":["unifiedmem_tb"],
+    "deps":{"instr_out":["PC"],"RD":["address"]}},
+  "MMIO": {"file":"rtl/MMIO.vhd","ports":[["MemWrite","in",4],["PC","in",32],["address","in",32],["WE3M_1","out",4],["WE3_2","out",4],["We_3","out",1],["We_4","out",1],["We_5","out",1],["RDsel","out",3],["intersel","out",2]],
+    "desc":"Address decoder. <code>intersel</code> from the PC (where the instruction comes from), <code>RDsel</code> and the write enables from the data address. Only the RAM write enable is connected; UART / PLIC / CLINT / GPIO are left open.","tests":["mmio_tb"],
+    "enc":[["RAM 0x8000_0000–","RDsel 000, WE3M_1 = WE"],["ROM 0x0000_1000–0x0000_1FFF","001, read only"],["UART 0x1000_0000–0x1000_00FF","010, WE3_2"],["PLIC 0x0C00_0000–0x0FFF_FFFF","011, We_3"],["CLINT 0x0200_0000–0x0200_FFFF","100, We_4"],["GPIO 0x1000_1000","101, We_5"],["anything else","101, no write"],["intersel","00 PC in ROM, 01 PC ≥ 0x8000_0000, 10 else"]],
+    "deps":{"intersel":["PC"],"RDsel":["address"],"WE3M_1":["address","MemWrite"],"WE3_2":["address","MemWrite"],"We_3":["address","MemWrite"],"We_4":["address","MemWrite"],"We_5":["address","MemWrite"]}},
+  "interselmux": {"file":"rtl/interselmux.vhd","ports":[["instr_boot","in",32],["instr_ram","in",32],["S","in",2],["instr_R","out",32]],
+    "desc":"Instruction source.","tests":["mmio_tb"],"enc":[["00","boot ROM"],["01","RAM"],["1x","0x0000_0000"]]},
+  "ReadDatamux": {"file":"rtl/ReadDatamux.vhd","ports":[["S","in",3],["MEMRAM","in",32],["MEMROM","in",32],["UART","in",32],["PLIC","in",32],["CLINT","in",32],["GPIO","in",32],["ReadData","out",32]],
+    "desc":"Load data source. UART / PLIC / CLINT / GPIO inputs are tied to 0 in cpu.vhd for now.","tests":["mmio_tb"],"enc":[["000","RAM"],["001","boot ROM"],["010","UART"],["011","PLIC"],["100","CLINT"],["101","GPIO"],["11x","0"]]}
+},
+"views": [
+{
+ "id":"cpu","title":"cpu (top level)","entity":"cpu","w":1700,"h":1120,
+ "frame":[30,30,1640,1060],
+ "blocks":[
+  {"id":"P_clk","port":"clk","x":60,"y":180,"face":"r","label":"clk"},
+  {"id":"P_rst","port":"rst","x":60,"y":220,"face":"r","label":"rst"},
+  {"id":"P_irq","port":"irq","x":60,"y":260,"face":"r","label":"irq"},
+  {"id":"P_Illegal","port":"Illegal","x":230,"y":1060,"face":"t","label":"Illegal"},
+  {"id":"P_RezOUT","port":"RezOUT","x":700,"y":1060,"face":"t","label":"RezOUT"},
+  {"id":"core","inst":"core_inst","entity":"core","shape":"rect","group":"core","x":150,"y":120,"w":300,"h":800,"label":"core","sub":"double-click to open",
+   "pins":{"l":["clk@60","rst@100","irq@140"],"r":["PC@80","instr@200","rez@400","WD@460","WE@520","OUT_OF_MEMORY_DATA@700"],"b":["Illegal@80"]}},
+  {"id":"isel","inst":"interselmux_inst","entity":"interselmux","shape":"mux","flip":true,"group":"cpu","x":620,"y":260,"w":50,"h":120,"label":"interselmux",
+   "pins":{"r":["instr_boot@30","instr_ram@70"],"l":["instr_R@60"],"b":["S@25"]},"codes":{"instr_boot":"00","instr_ram":"01"},"mux":{"sel":"S","map":{"00":"instr_boot","01":"instr_ram"}}},
+  {"id":"rdmux","inst":"ReadDatamux_inst","entity":"ReadDatamux","shape":"mux","flip":true,"group":"cpu","x":620,"y":700,"w":55,"h":290,"label":"ReadDatamux",
+   "pins":{"r":["MEMRAM@30","MEMROM@70","UART@120","PLIC@160","CLINT@200","GPIO@240"],"l":["ReadData@120"],"t":["S@27"]},
+   "codes":{"MEMRAM":"000","MEMROM":"001","UART":"010","PLIC":"011","CLINT":"100","GPIO":"101"},
+   "mux":{"sel":"S","map":{"000":"MEMRAM","001":"MEMROM","010":"UART","011":"PLIC","100":"CLINT","101":"GPIO"}}},
+  {"id":"mmio","inst":"MMIO_inst","entity":"MMIO","shape":"rect","group":"cpu","x":800,"y":440,"w":260,"h":220,"label":"MMIO","sub":"address decoder",
+   "pins":{"l":["PC@40","address@80","MemWrite@200"],"t":["intersel@40"],"b":["RDsel@40"],"r":["WE3M_1@40","WE3_2@100","We_3@130","We_4@160","We_5@190"]}},
+  {"id":"rom","inst":"bootrom_inst","entity":"bootrom","shape":"rect","group":"cpu","x":1300,"y":120,"w":280,"h":200,"label":"boot ROM","sub":"bootrom.vhd · boot.hex · 0x0000_1000",
+   "pins":{"l":["PC@30","address@80","instr_out@130","RD@170"]}},
+  {"id":"um","inst":"unifiedmem_inst","entity":"unifiedmem","shape":"rect","group":"cpu","x":1300,"y":420,"w":280,"h":300,"label":"RAM","sub":"unifiedmem.vhd · hex.hex · 0x8000_0000",
+   "pins":{"l":["PC@30","instr_out@80","address@130","wD@180","WE@220","RD@260"],"b":["clk@40"]}}
+ ],
+ "wires":[
+  {"id":"clk","kind":"clk","paths":[["P_clk.p","core.clk"]],"stubs":["um.clk"],"label":"clk"},
+  {"id":"rst","kind":"clk","paths":[["P_rst.p","core.rst"]]},
+  {"id":"irq","kind":"ctrl","sig":"irq","paths":[["P_irq.p","core.irq"]]},
+  {"id":"Illegal","kind":"ctrl","sig":"Illegal","paths":[["core.Illegal","P_Illegal.p"]]},
+  {"id":"PC","label":"PC","paths":[["core.PC","x:1200","y:150","rom.PC"],["@1200,200","y:450","um.PC"],["@760,200","y:480","mmio.PC"]]},
+  {"id":"instr_boot","label":"instr (ROM)","paths":[["rom.instr_out","x:1150","y:290","isel.instr_boot"]]},
+  {"id":"instr_ram","label":"instr (RAM)","paths":[["um.instr_out","x:1100","y:330","isel.instr_ram"]]},
+  {"id":"instr","label":"instr","paths":[["isel.instr_R","core.instr"]]},
+  {"id":"intersel","kind":"ctrl","sig":"intersel","paths":[["mmio.intersel","y:415","x:645","isel.S"]]},
+  {"id":"rez","label":"rez = address","paths":[["core.rez","mmio.address"],["@720,520","y:1030","x:1250","y:550","um.address"],["@1250,550","y:200","rom.address"],["@720,1030","x:700","P_RezOUT.p"]]},
+  {"id":"WD","label":"WD","paths":[["core.WD","x:740","y:705","x:1235","y:600","um.wD"]]},
+  {"id":"WE","kind":"ctrl","sig":"WE","label":"WE[3:0]","paths":[["core.WE","mmio.MemWrite"]]},
+  {"id":"WE3M_1","kind":"ctrl","sig":"WE3M_1","paths":[["mmio.WE3M_1","x:1150","y:640","um.WE"]]},
+  {"id":"o1","open":true,"pin":"mmio.WE3_2"},{"id":"o2","open":true,"pin":"mmio.We_3"},{"id":"o3","open":true,"pin":"mmio.We_4"},{"id":"o4","open":true,"pin":"mmio.We_5"},
+  {"id":"RDsel","kind":"ctrl","sig":"RDsel","paths":[["mmio.RDsel","y:680","x:647","rdmux.S"]]},
+  {"id":"MEMRAM","label":"RD (RAM)","paths":[["um.RD","x:1180","y:730","rdmux.MEMRAM"]]},
+  {"id":"MEMROM","label":"RD (ROM)","paths":[["rom.RD","x:1275","y:770","rdmux.MEMROM"]]},
+  {"id":"k1","konst":"0  UART","pin":"rdmux.UART"},{"id":"k2","konst":"0  PLIC","pin":"rdmux.PLIC"},{"id":"k3","konst":"0  CLINT","pin":"rdmux.CLINT"},{"id":"k4","konst":"0  GPIO","pin":"rdmux.GPIO"},
+  {"id":"ReadData","label":"ReadData","paths":[["rdmux.ReadData","core.OUT_OF_MEMORY_DATA"]]}
+ ]
+},
+{
+ "id":"core","title":"core (DataPath + controlblock + Write/ReadBlock)","entity":"core","parent":"cpu","w":2700,"h":1780,
+ "frame":[30,30,2620,1720],
+ "blocks":[
+  {"id":"P_instr","port":"instr","x":60,"y":330,"face":"r","label":"instr ← memory"},
+  {"id":"P_PC","port":"PC","x":60,"y":390,"face":"r","label":"PC → memory"},
+  {"id":"P_irq","port":"irq","x":60,"y":1490,"face":"r","label":"irq"},
+  {"id":"P_clk","port":"clk","x":260,"y":1750,"face":"t","label":"clk"},
+  {"id":"P_rst","port":"rst","x":330,"y":1750,"face":"t","label":"rst"},
+  {"id":"P_Illegal","port":"Illegal","x":2640,"y":620,"face":"l","label":"Illegal"},
+  {"id":"P_rez","port":"rez","x":1520,"y":1750,"face":"t","label":"rez (address)"},
+  {"id":"P_WE","port":"WE","x":1780,"y":1750,"face":"t","label":"WE"},
+  {"id":"P_WD","port":"WD","x":1820,"y":1750,"face":"t","label":"WD"},
+  {"id":"P_mem","port":"OUT_OF_MEMORY_DATA","x":1950,"y":1750,"face":"t","label":"read data"},
+
+  {"id":"pcmux","inst":"DataPath_inst/Pc_mux_inst","entity":"Pc_mux","shape":"mux","group":"DataPath","x":120,"y":720,"w":50,"h":220,"label":"PC mux",
+   "pins":{"l":["PCPlus4@30","PCL@80","mtvec_handler_addr@130","mepc_ret_addr@180"],"t":["S@25"],"r":["PCOUT@110"]},
+   "codes":{"PCPlus4":"00","PCL":"01","mtvec_handler_addr":"10","mepc_ret_addr":"11"},
+   "mux":{"sel":"S","map":{"00":"PCPlus4","01":"PCL","10":"mtvec_handler_addr","11":"mepc_ret_addr"}}},
+  {"id":"pc","inst":"DataPath_inst/pc_inst","entity":"pc","shape":"reg","group":"DataPath","x":230,"y":770,"w":70,"h":120,"label":"PC",
+   "pins":{"l":["PCNext@60"],"r":["PC_REG@60"],"b":["clk@20","rst@50"]}},
+  {"id":"pcplus4","inst":"DataPath_inst/PCPlus4_inst","entity":"PCPlus4","shape":"adder","group":"DataPath","x":360,"y":1000,"w":80,"h":120,"label":"+4",
+   "pins":{"l":["PC@30"],"r":["PC_O@60"]},"deco":[{"side":"l","at":95,"text":"4"}]},
+  {"id":"rf","inst":"DataPath_inst/riscvregfile_inst","entity":"riscvregfile","shape":"rect","group":"DataPath","x":640,"y":700,"w":260,"h":300,"label":"Register file","sub":"x0..x31",
+   "pins":{"l":["read_idx_first@40","read_idx_second@110","write_idx@180","write_In@250"],"r":["read_out_first@40","read_out_second@110"],"t":["write_en@200"],"b":["clk@40"]},
+   "short":{"read_idx_first":"A1 rs1","read_idx_second":"A2 rs2","write_idx":"A3 rd","write_In":"WD3","read_out_first":"RD1","read_out_second":"RD2","write_en":"WE3"}},
+  {"id":"immgen","inst":"DataPath_inst/ImmGen_inst","entity":"ImmGen","shape":"rect","group":"DataPath","x":660,"y":1080,"w":220,"h":90,"label":"ImmGen","sub":"I / S / B / J / U",
+   "pins":{"l":["imm@30"],"t":["imm_src@110"],"r":["imm_out@30"]}},
+  {"id":"srca","inst":"DataPath_inst/SrcAMux_inst","entity":"SrcAMux","shape":"mux","group":"DataPath","x":1080,"y":700,"w":50,"h":120,"label":"SrcA mux",
+   "pins":{"l":["SrcA@40","PC@80"],"t":["S@35"],"r":["Y@60"]},"codes":{"SrcA":"00","PC":"01"},"deco":[{"side":"l","at":105,"text":"0","code":"10"}],
+   "mux":{"sel":"S","map":{"00":"SrcA","01":"PC"}}},
+  {"id":"alumux","inst":"DataPath_inst/alu_muxSRCB_inst","entity":"alu_mux","shape":"mux","group":"DataPath","x":1080,"y":860,"w":50,"h":110,"label":"SrcB mux",
+   "pins":{"l":["rd2@30","imm@80"],"t":["S@15"],"r":["muxout@55"]},"codes":{"rd2":"0","imm":"1"},
+   "mux":{"sel":"S","map":{"0":"rd2","1":"imm"}}},
+  {"id":"alu","inst":"DataPath_inst/alu_inst","entity":"alu","shape":"alu","group":"DataPath","x":1220,"y":700,"w":110,"h":260,"label":"ALU",
+   "pins":{"l":["A_input@60","B_input@215"],"t":["alu_control@55"],"r":["Z@30","res_out@130"]}},
+  {"id":"muxjalr","inst":"DataPath_inst/MuxJalr_inst","entity":"MuxJalr","shape":"mux","group":"DataPath","x":1080,"y":1060,"w":50,"h":100,"label":"JALR mux",
+   "pins":{"l":["PC_NOW@30","RD1@75"],"t":["JalrReg@25"],"r":["PCtarget_IN@50"]},"codes":{"PC_NOW":"0","RD1":"1"},
+   "mux":{"sel":"JalrReg","map":{"0":"PC_NOW","1":"RD1"}}},
+  {"id":"pctarget","inst":"DataPath_inst/PCTarget_inst","entity":"PCTarget","shape":"adder","group":"DataPath","x":1220,"y":1060,"w":80,"h":120,"label":"+",
+   "pins":{"l":["PC@50"],"b":["offset@40"],"r":["PCOFFSET@60"]}},
+  {"id":"zerogen","inst":"DataPath_inst/ZeroGen_inst","entity":"ZeroGen","shape":"rect","group":"DataPath","x":1360,"y":1090,"w":90,"h":60,"label":"ZeroGen","small":true,
+   "pins":{"l":["INP@30"],"r":["OUTP@30"]}},
+  {"id":"csr","inst":"DataPath_inst/CSRblock_inst","entity":"CSRblock","shape":"rect","group":"DataPath","x":700,"y":1350,"w":540,"h":220,"label":"CSRblock","sub":"mstatus · mie · mtvec · mepc · mcause · mip",
+   "pins":{"l":["CSRnum@40","mepc_ret_addr_in@90","irq@140"],"t":["w_DATA@260","CSRwrite@450","CSROp@470","MRET@490","TRAP@520"],"b":["clk@30","rst@60","mtvec_handler_addr@150","mepc_ret_addr_out@190"],"r":["CSR_RES@60","MIE@120","MEIE@150"]},
+   "short":{"mepc_ret_addr_in":"PC → mepc","mtvec_handler_addr":"mtvec","mepc_ret_addr_out":"mepc","w_DATA":"wdata","CSR_RES":"old value","CSRwrite":"","CSROp":"","MRET":"","TRAP":"","MIE":"","MEIE":""}},
+  {"id":"resmux","inst":"DataPath_inst/result_mux_inst","entity":"result_mux","shape":"mux","group":"DataPath","x":2150,"y":660,"w":55,"h":260,"label":"Result mux",
+   "pins":{"l":["ALU_Res@50","ReadData@100","PC_4@150","CSR_RES@200"],"t":["Result_Src@27"],"r":["Mux_Res@130"]},
+   "codes":{"ALU_Res":"00","ReadData":"01","PC_4":"10","CSR_RES":"11"},
+   "mux":{"sel":"Result_Src","map":{"00":"ALU_Res","01":"ReadData","10":"PC_4","11":"CSR_RES"}}},
+  {"id":"cu","inst":"controlblock_inst/ControlUnit_inst","entity":"ControlUnit","shape":"rect","group":"controlblock","x":640,"y":80,"w":230,"h":580,"label":"ControlUnit",
+   "pins":{"l":["opcode@60","funct3@100","funct7@140","rs1@180"],"r":["Branch@40","Jump@70","MRET@100","RegWrite@160","Mem_Write@220","Result_Src@300","alu_control@330","ASrc@360","BSrc@390","ImmSrc@420","JalrReg@450","CSRwrite@480","CSRop@510","Illegal@540"]},
+   "deps":{"*":["opcode","funct3","funct7"],"CSRwrite":["opcode","funct3","funct7","rs1"]}},
+  {"id":"pcsrc","inst":"controlblock_inst:pcsrc","logic":{"in":["branch","jump","mret_r","trap_ins","zero","instr"],"out":"pcsrc",
+     "expr":"PCsrc <= \"10\" when TRAP_INS = '1' else \"11\" when MRET_R = '1' else \"01\" when (branch = '1' and (zero xor instr(12) xor instr(14)) = '1') or (Jump = '1') else \"00\";"},
+   "shape":"logic","group":"controlblock","x":1100,"y":90,"w":130,"h":140,"label":"PCSrc logic",
+   "pins":{"l":["branch@30","jump@60","mret_r@90","trap_ins@120"],"t":["instr@80"],"b":["zero@100"],"r":["pcsrc@70"]},
+   "desc":"Next-PC select in priority order: interrupt → mtvec, mret → mepc, taken branch or jump → target, else PC + 4. A branch is taken when <code>Zero ⊕ funct3[0] ⊕ funct3[2]</code> = 1."},
+  {"id":"rwgate","inst":"controlblock_inst:regwrite","logic":{"in":["regwrite_i","trap_ins"],"out":"regwrite","expr":"RegWrite <= RegWrite_I and not TRAP_INS;"},
+   "shape":"gate","group":"controlblock","x":960,"y":225,"w":70,"h":50,"label":"&",
+   "pins":{"l":["regwrite_i@15","trap_ins@38"],"r":["regwrite@25"]},"inv":["trap_ins"],"desc":"A trap cancels the register write of the interrupted instruction."},
+  {"id":"mwgate","inst":"controlblock_inst:mem_write","logic":{"in":["memwrite_i","trap_ins"],"out":"mem_write","expr":"Mem_Write <= MemWrite_I and not TRAP_INS;"},
+   "shape":"gate","group":"controlblock","x":960,"y":285,"w":70,"h":50,"label":"&",
+   "pins":{"l":["memwrite_i@15","trap_ins@38"],"r":["mem_write@25"]},"inv":["trap_ins"],"desc":"A trap cancels the store of the interrupted instruction."},
+  {"id":"trapand","inst":"controlblock_inst:trap_ins","logic":{"in":["meie","mie","irq"],"out":"trap_ins","expr":"TRAP_INS <= MEIE and MIE and irq;"},
+   "shape":"gate","group":"controlblock","x":1300,"y":1420,"w":70,"h":100,"label":"&",
+   "pins":{"l":["irq@20","mie@50","meie@80"],"r":["trap_ins@50"]},"desc":"Interrupt taken when <code>irq</code>, <code>mstatus.MIE</code> and <code>mie.MEIE</code> are all 1. Level-sensitive: it fires again on every instruction until the source drops irq or MIE is cleared (the trap itself clears MIE)."},
+  {"id":"wb","inst":"WriteBlock_inst","entity":"WriteBlock","shape":"rect","group":"core","x":1600,"y":1000,"w":150,"h":150,"label":"WriteBlock",
+   "pins":{"l":["rd2@40","addr_2_bits@80","funct3@120"],"t":["Mem_Write@75"],"r":["WE@50","wD@100"]},"short":{"addr_2_bits":"addr[1:0]"}},
+  {"id":"rb","inst":"ReadBlock_inst","entity":"ReadBlock","shape":"rect","group":"core","x":1880,"y":700,"w":150,"h":150,"label":"ReadBlock",
+   "pins":{"l":["addr_2_bits@60","funct3@110"],"b":["Memory_Data@70"],"r":["ReadData@60"]},"short":{"addr_2_bits":"addr[1:0]","Memory_Data":"mem word"}}
+ ],
+ "wires":[
+  {"id":"clk","kind":"clk","label":"clk","stubs":["P_clk.p","pc.clk","rf.clk","csr.clk"]},
+  {"id":"rst","kind":"clk","label":"rst","stubs":["P_rst.p","pc.rst","csr.rst"]},
+  {"id":"PCNext","label":"PCNext","paths":[["pcmux.PCOUT","pc.PCNext"]]},
+  {"id":"PC","label":"PC","paths":[["pc.PC_REG","x:340","y:390","P_PC.p"],["@340,830","y:1040","x:1050","y:1090","muxjalr.PC_NOW"],["@340,1030","pcplus4.PC"],["@1050,1040","y:780","srca.PC"],["@340,1040","y:1440","csr.mepc_ret_addr_in"]]},
+  {"id":"PCPlus4","label":"PC+4","paths":[["pcplus4.PC_O","x:470","y:1250","x:2100","y:810","resmux.PC_4"],["@470,1060","y:680","x:100","y:750","pcmux.PCPlus4"]]},
+  {"id":"PCTargetZ","label":"PCTarget","paths":[["zerogen.OUTP","x:1470","y:1280","x:88","y:800","pcmux.PCL"]]},
+  {"id":"mtvec","label":"mtvec","paths":[["csr.mtvec_handler_addr","y:1610","x:76","y:850","pcmux.mtvec_handler_addr"]]},
+  {"id":"mepc","label":"mepc","paths":[["csr.mepc_ret_addr_out","y:1630","x:64","y:900","pcmux.mepc_ret_addr"]]},
+  {"id":"PCSrc","kind":"ctrl","sig":"PCsrc","label":"PCSrc","paths":[["pcsrc.pcsrc","x:1260","y:50","x:145","pcmux.S"]]},
+  {"id":"instr","label":"instr","paths":[
+     ["P_instr.p","x:560","y:1390","#[31:20]","csr.CSRnum"],["@560,330","y:70","x:1180","#[12],[14]","pcsrc.instr"],
+     ["@560,140","#[6:0]","cu.opcode"],["@560,180","#[14:12]","cu.funct3"],["@560,220","#[31:25]","cu.funct7"],["@560,260","#[19:15]","cu.rs1"],
+     ["@560,740","#[19:15]","rf.read_idx_first"],["@560,810","#[24:20]","rf.read_idx_second"],["@560,880","#[11:7]","rf.write_idx"],["@560,1110","#[31:7]","immgen.imm"],
+     ["@560,1225","x:1560","y:1120","#[14:12]","wb.funct3"],["@1560,1225","x:1850","y:810","#[14:12]","rb.funct3"]]},
+  {"id":"RD1","label":"RD1","paths":[["rf.read_out_first","srca.SrcA"],["@960,740","csr.w_DATA"],["@960,1135","muxjalr.RD1"]]},
+  {"id":"RD2","label":"RD2","paths":[["rf.read_out_second","x:1020","y:890","alumux.rd2"],["@1020,890","y:1020","x:1570","y:1040","wb.rd2"]]},
+  {"id":"ImmExt","label":"ImmExt","paths":[["immgen.imm_out","x:1040","y:940","alumux.imm"],["@1040,1110","y:1200","x:1260","pctarget.offset"]]},
+  {"id":"SrcA","label":"SrcA","paths":[["srca.Y","alu.A_input"]]},
+  {"id":"SrcB","label":"SrcB","paths":[["alumux.muxout","alu.B_input"]]},
+  {"id":"PCtarget_IN","paths":[["muxjalr.PCtarget_IN","pctarget.PC"]]},
+  {"id":"PCOFFSET","paths":[["pctarget.PCOFFSET","zerogen.INP"]]},
+  {"id":"Zero","kind":"ctrl","sig":"Zero","label":"Zero","paths":[["alu.Z","x:1360","y:290","x:1200","pcsrc.zero"]]},
+  {"id":"ALUResult","label":"ALUResult","paths":[["alu.res_out","x:1520","y:680","x:2120","y:710","resmux.ALU_Res"],["@1520,830","P_rez.p"],["@1520,760","#[1:0]","rb.addr_2_bits"],["@1520,1080","#[1:0]","wb.addr_2_bits"]]},
+  {"id":"Result","label":"Result","paths":[["resmux.Mux_Res","x:2250","y:1300","x:600","y:950","rf.write_In"]]},
+  {"id":"ReadData","label":"ReadData","paths":[["rb.ReadData","resmux.ReadData"]]},
+  {"id":"CSR_RES","label":"CSR old value","paths":[["csr.CSR_RES","x:2085","y:860","resmux.CSR_RES"]]},
+  {"id":"MemData","label":"mem word","paths":[["P_mem.p","rb.Memory_Data"]]},
+  {"id":"WEout","kind":"ctrl","sig":"WE","label":"WE[3:0]","paths":[["wb.WE","x:1780","P_WE.p"]]},
+  {"id":"WDout","label":"wD","paths":[["wb.wD","x:1820","P_WD.p"]]},
+  {"id":"Branch","kind":"ctrl","sig":"Branch","paths":[["cu.Branch","pcsrc.branch"]]},
+  {"id":"Jump","kind":"ctrl","sig":"Jump","paths":[["cu.Jump","pcsrc.jump"]]},
+  {"id":"MRET","kind":"ctrl","sig":"MRET","paths":[["cu.MRET","pcsrc.mret_r"],["@1080,180","y:680","x:1190","csr.MRET"]]},
+  {"id":"RegWrite_I","kind":"ctrl","sig":"RegWrite_I","paths":[["cu.RegWrite","rwgate.regwrite_i"]]},
+  {"id":"MemWrite_I","kind":"ctrl","sig":"MemWrite_I","paths":[["cu.Mem_Write","mwgate.memwrite_i"]]},
+  {"id":"RegWrite","kind":"ctrl","sig":"RegWrite","label":"RegWrite","paths":[["rwgate.regwrite","x:1060","y:670","x:840","rf.write_en"]]},
+  {"id":"MemWrite","kind":"ctrl","sig":"MemWrite","label":"MemWrite","paths":[["mwgate.mem_write","wb.Mem_Write"]]},
+  {"id":"ResultSrc","kind":"ctrl","sig":"Result_Src","label":"ResultSrc","paths":[["cu.Result_Src","resmux.Result_Src"]]},
+  {"id":"ALUControl","kind":"ctrl","sig":"alu_control","label":"ALUControl","paths":[["cu.alu_control","alu.alu_control"]]},
+  {"id":"ASrc","kind":"ctrl","sig":"ASrc","label":"ASrc","paths":[["cu.ASrc","srca.S"]]},
+  {"id":"BSrc","kind":"ctrl","sig":"BSrc","label":"BSrc","paths":[["cu.BSrc","x:1070","y:845","alumux.S"]]},
+  {"id":"ImmSrc","kind":"ctrl","sig":"ImmSrc","label":"ImmSrc","paths":[["cu.ImmSrc","x:920","y:1060","x:770","immgen.imm_src"]]},
+  {"id":"JalrReg","kind":"ctrl","sig":"JalrReg","label":"JalrReg","paths":[["cu.JalrReg","x:1000","y:1052","x:1105","muxjalr.JalrReg"]]},
+  {"id":"CSRwrite","kind":"ctrl","sig":"CSRwrite","label":"CSRwrite","paths":[["cu.CSRwrite","x:1150","csr.CSRwrite"]]},
+  {"id":"CSRop","kind":"ctrl","sig":"CSRop","label":"CSRop","paths":[["cu.CSRop","x:1170","csr.CSROp"]]},
+  {"id":"Illegal","kind":"ctrl","sig":"Illegal","label":"Illegal","paths":[["cu.Illegal","P_Illegal.p"]]},
+  {"id":"TRAP","kind":"ctrl","sig":"TRAP","label":"TRAP","paths":[["trapand.trap_ins","x:1400","y:1335","x:940","y:210","pcsrc.trap_ins"],["@1220,1335","csr.TRAP"],["@940,263","rwgate.trap_ins"],["@940,323","mwgate.trap_ins"]]},
+  {"id":"irq","kind":"ctrl","sig":"irq","label":"irq","paths":[["P_irq.p","csr.irq"],["@620,1490","y:1660","x:1270","y:1440","trapand.irq"]]},
+  {"id":"MIE","kind":"ctrl","sig":"MIE","label":"MIE","paths":[["csr.MIE","trapand.mie"]]},
+  {"id":"MEIE","kind":"ctrl","sig":"MEIE","label":"MEIE","paths":[["csr.MEIE","trapand.meie"]]}
+ ]
+}
+],
+"stories": [
+ {"id":"boot","title":"Boot: ROM → RAM","sub":"reset, lui, jalr, first RAM fetch","beats":[
+   {"view":"cpu","asm":"lui x5, 0x80000","ctx":{"pc":"rom"},"text":"After reset the PC is <code>0x0000_1000</code>. MMIO sees the PC in the ROM range, so <code>intersel = 00</code> and <b>interselmux</b> passes the boot ROM word to the core."},
+   {"view":"core","asm":"lui x5, 0x80000","ctx":{"pc":"rom"},"text":"<code>lui x5, 0x80000</code>: ImmGen builds the U immediate (<code>ImmSrc = 100</code>), SrcA mux feeds 0 (<code>ASrc = 10</code>), ALU adds, x5 ← <code>0x8000_0000</code>."},
+   {"view":"core","asm":"jalr x0, 0(x5)","ctx":{"pc":"rom"},"text":"<code>jalr x0, 0(x5)</code>: JALR mux picks RD1 (<code>JalrReg = 1</code>), the adder adds 0, ZeroGen clears bit 0, <code>PCSrc = 01</code>. Next PC = <code>0x8000_0000</code>. rd = x0, so the PC+4 write is dropped by the register file."},
+   {"view":"cpu","asm":"addi x10, x0, 20","ctx":{"pc":"ram"},"text":"Now PC ≥ <code>0x8000_0000</code>: <code>intersel = 01</code>, instructions come from the RAM (<code>hex.hex</code>), which also holds the program's data."}]},
+ {"id":"r","title":"R-type: add","sub":"add x3, x1, x2","beats":[
+   {"view":"core","asm":"add x3, x1, x2","text":"Both register reads go through the muxes (<code>ASrc = 00</code>, <code>BSrc = 0</code>) into the ALU (<code>ALUControl = 0000</code>). <code>ResultSrc = 00</code> writes the ALU result into x3. Next PC = PC + 4."}]},
+ {"id":"i","title":"I-type: addi / srai","sub":"immediate as SrcB","beats":[
+   {"view":"core","asm":"addi x5, x5, -1","text":"Same as R-type, but SrcB is the I immediate (<code>BSrc = 1</code>, <code>ImmSrc = 000</code>)."},
+   {"view":"core","asm":"srai x6, x6, 3","text":"Shifts use the immediate too; funct7 = 0100000 selects arithmetic shift (<code>ALUControl = 1101</code>), shift amount = B[4:0]."}]},
+ {"id":"lw","title":"Load: lw / lb","sub":"address, memory, ReadBlock","beats":[
+   {"view":"core","asm":"lw x5, 8(x2)","text":"ALU computes rs1 + 8 = the address, which leaves the core on <code>rez</code>. The memory word comes back on <code>OUT_OF_MEMORY_DATA</code>, ReadBlock picks the word (funct3 = 010, address bits [1:0]), <code>ResultSrc = 01</code> writes it to x5."},
+   {"view":"cpu","asm":"lw x5, 8(x2)","ctx":{"mem":"ram"},"text":"At the top level MMIO decodes the address: RAM → <code>RDsel = 000</code>, ReadDatamux returns the RAM word."},
+   {"view":"cpu","asm":"lw x5, 0(x6)","ctx":{"mem":"rom"},"text":"The same load from the boot ROM range: <code>RDsel = 001</code>. The ROM has its own data port, so code can read constants from it."},
+   {"view":"core","asm":"lb x5, 3(x2)","text":"<code>lb</code>: ReadBlock takes byte 3 and sign-extends it. Misaligned <code>lh</code>/<code>lw</code> read 0."}]},
+ {"id":"sw","title":"Store: sw / sb","sub":"WriteBlock, byte enables","beats":[
+   {"view":"core","asm":"sw x5, 12(x2)","text":"Address = rs1 + S immediate (<code>ImmSrc = 001</code>). RD2 goes to WriteBlock, which sets <code>WE = 1111</code>. No register write."},
+   {"view":"cpu","asm":"sw x5, 12(x2)","ctx":{"mem":"ram"},"text":"MMIO passes WE to the RAM only for RAM addresses (<code>WE3M_1</code>); the write happens on the clock edge."},
+   {"view":"cpu","asm":"sw x5, 0(x6)","ctx":{"mem":"rom"},"text":"A store to the ROM range: <code>WE3M_1 = 0000</code>, the store is dropped."},
+   {"view":"core","asm":"sb x5, 1(x2)","text":"<code>sb</code> at offset 1: the byte is copied into all lanes of wD, <code>WE = 0010</code> picks lane 1."}]},
+ {"id":"br","title":"Branch: beq / blt","sub":"Zero flag and PCSrc","beats":[
+   {"view":"core","asm":"beq x1, x2, -8","ctx":{"taken":true},"text":"ALU subtracts (<code>ALUControl = 1000</code>), Zero = 1. PCSrc logic: Branch · (Zero ⊕ f3[0] ⊕ f3[2]) = 1 → <code>PCSrc = 01</code>, PC ← PC + B-immediate."},
+   {"view":"core","asm":"beq x1, x2, -8","ctx":{"taken":false},"text":"Not taken: Zero = 0 → <code>PCSrc = 00</code>, PC + 4."},
+   {"view":"core","asm":"blt x1, x2, 16","ctx":{"taken":true},"text":"<code>blt</code> uses slt (<code>ALUControl = 0010</code>): result 1 → Zero = 0, and funct3[2] = 1 flips the test, so the branch is taken."}]},
+ {"id":"j","title":"Jumps: jal / jalr","sub":"PC+4 to rd","beats":[
+   {"view":"core","asm":"jal x1, 64","text":"<code>Jump = 1</code> → <code>PCSrc = 01</code>, target = PC + J immediate. <code>ResultSrc = 10</code> saves PC + 4 in x1."},
+   {"view":"core","asm":"jalr x0, 0(x1)","text":"<code>ret</code>: JALR mux picks rs1 (<code>JalrReg = 1</code>), target = (x1 + 0) with bit 0 cleared by ZeroGen."}]},
+ {"id":"u","title":"U-type: lui / auipc","sub":"SrcA = 0 or PC","beats":[
+   {"view":"core","asm":"lui x7, 0x12345","text":"<code>ASrc = 10</code> feeds 0 to the ALU, so rd = U immediate."},
+   {"view":"core","asm":"auipc x7, 0x1","text":"<code>ASrc = 01</code> feeds the PC, so rd = PC + (imm << 12)."}]},
+ {"id":"csr","title":"CSR access","sub":"csrrw / csrrs","beats":[
+   {"view":"core","asm":"csrrw x0, mtvec, x5","text":"<code>csrrw</code>: CSRblock gets rs1 as write data and the CSR number from instr[31:20]; <code>CSRwrite = 1</code>, <code>CSRop = 01</code>. The old value goes to rd via <code>ResultSrc = 11</code> (here rd = x0)."},
+   {"view":"core","asm":"csrrs x6, mstatus, x7","text":"<code>csrrs</code>: new value = old | rs1 (<code>CSRop = 10</code>), rd gets the old value."},
+   {"view":"core","asm":"csrrs x6, mcause, x0","text":"<code>csrr</code> (= csrrs with rs1 = x0): ControlUnit sees rs1 = 0 and keeps <code>CSRwrite = 0</code>; read only."}]},
+ {"id":"irq","title":"Interrupt trap","sub":"irq · MIE · MEIE","beats":[
+   {"view":"core","asm":"addi x5, x5, 1","ctx":{"irq":true,"mie":false,"meie":true},"text":"irq = 1 but <code>mstatus.MIE = 0</code>: the AND gate keeps TRAP = 0, the instruction runs normally."},
+   {"view":"core","asm":"addi x5, x5, 1","ctx":{"irq":true,"mie":true,"meie":true},"text":"All three are 1 → <b>TRAP</b>. RegWrite and MemWrite are forced to 0 (the instruction is cancelled), <code>PCSrc = 10</code> sends the PC to <code>mtvec</code>, CSRblock saves this PC in mepc, sets mcause = <code>0x8000_000B</code> and clears MIE."},
+   {"view":"cpu","asm":"addi x5, x5, 1","ctx":{"irq":true,"mie":true,"meie":true},"text":"At the top level an interrupt is just the <code>irq</code> pin; nothing else changes. There is no way to acknowledge it from software yet, so the source must drop irq before mret."}]},
+ {"id":"mret","title":"mret","sub":"back to mepc","beats":[
+   {"view":"core","asm":"mret","text":"<code>MRET = 1</code> → <code>PCSrc = 11</code>, PC ← mepc (the cancelled instruction runs again). CSRblock: MIE ← MPIE, MPIE ← 1."}]},
+ {"id":"ill","title":"Illegal instruction","sub":"ecall, fence, csrrwi …","beats":[
+   {"view":"core","asm":"ecall","text":"Not supported: ControlUnit raises only <code>Illegal</code> (a cpu output). Nothing is written, PC + 4: the instruction is a no-op. There is no illegal-instruction trap."}]}
+]
+}
+</script>
+
+<!-- ================================================================ DECODER
+  JS copy of rtl/ControlUnit.vhd (+ the controlblock logic). tb_ci_cd/check_docs.js runs controlUnit()
+  against a GHDL dump of ControlUnit for every opcode/funct3/funct7(/rs1) and must match bit for bit. -->
+<script id="decoder">
+(function () {
+  function controlUnit(op, f3, f7, rs1) {
+    var o = {RegWrite:0, ASrc:0, BSrc:0, Illegal:0, Branch:0, ImmSrc:0, Mem_Write:0, Result_Src:0, alu_control:0,
+             CSRwrite:0, CSRop:0, MRET:0, JalrReg:0, Jump:0};
+    var ok7 = f7 === 0, alt7 = f7 === 0x20;
+    if (op === 0x33) {                                   // R-type
+      var rAlu = [0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7];
+      if (ok7) { o.RegWrite = 1; o.alu_control = rAlu[f3]; }
+      else if (alt7 && f3 === 0) { o.RegWrite = 1; o.alu_control = 0x8; }
+      else if (alt7 && f3 === 5) { o.RegWrite = 1; o.alu_control = 0xD; }
+      else o.Illegal = 1;
+    } else if (op === 0x13) {                            // I-type ALU
+      o.BSrc = 1;
+      if (f3 === 1) { if (ok7) { o.RegWrite = 1; o.alu_control = 0x1; } else o.Illegal = 1; }
+      else if (f3 === 5) { if (ok7) { o.RegWrite = 1; o.alu_control = 0x5; } else if (alt7) { o.RegWrite = 1; o.alu_control = 0xD; } else o.Illegal = 1; }
+      else { o.RegWrite = 1; o.alu_control = f3; }
+    } else if (op === 0x63) {                            // branches
+      if (f3 === 0 || f3 === 1) { o.Branch = 1; o.ImmSrc = 2; o.alu_control = 0x8; }
+      else if (f3 === 4 || f3 === 5) { o.Branch = 1; o.ImmSrc = 2; o.alu_control = 0x2; }
+      else if (f3 === 6 || f3 === 7) { o.Branch = 1; o.ImmSrc = 2; o.alu_control = 0x3; }
+      else o.Illegal = 1;
+    } else if (op === 0x23) {                            // stores
+      if (f3 < 3) { o.Mem_Write = 1; o.BSrc = 1; o.ImmSrc = 1; } else o.Illegal = 1;
+    } else if (op === 0x03) {                            // loads
+      if (f3 === 0 || f3 === 1 || f3 === 2 || f3 === 4 || f3 === 5) { o.RegWrite = 1; o.BSrc = 1; o.Result_Src = 1; }
+      else o.Illegal = 1;
+    } else if (op === 0x6F) {                            // jal
+      o.Jump = 1; o.Result_Src = 2; o.RegWrite = 1; o.ImmSrc = 3;
+    } else if (op === 0x67) {                            // jalr
+      if (f3 === 0) { o.JalrReg = 1; o.Jump = 1; o.Result_Src = 2; o.RegWrite = 1; } else o.Illegal = 1;
+    } else if (op === 0x37 || op === 0x17) {             // lui / auipc
+      o.BSrc = 1; o.ImmSrc = 4; o.RegWrite = 1; o.ASrc = op === 0x37 ? 2 : 1;
+    } else if (op === 0x73) {                            // SYSTEM
+      if (f3 === 0 && f7 === 0x18) o.MRET = 1;
+      else if (f3 === 1) { o.RegWrite = 1; o.Result_Src = 3; o.CSRwrite = 1; o.CSRop = 1; }
+      else if (f3 === 2) { o.RegWrite = 1; o.Result_Src = 3; o.CSRop = 2; o.CSRwrite = rs1 !== 0 ? 1 : 0; }
+      else if (f3 === 3) { o.RegWrite = 1; o.Result_Src = 3; o.CSRop = 3; o.CSRwrite = rs1 !== 0 ? 1 : 0; }
+      else o.Illegal = 1;
+    } else o.Illegal = 1;
+    return o;
+  }
+
+  var REG = {zero:0, ra:1, sp:2, gp:3, tp:4, t0:5, t1:6, t2:7, s0:8, fp:8, s1:9, a0:10, a1:11, a2:12, a3:13, a4:14, a5:15, a6:16, a7:17,
+             s2:18, s3:19, s4:20, s5:21, s6:22, s7:23, s8:24, s9:25, s10:26, s11:27, t3:28, t4:29, t5:30, t6:31};
+  var CSR = {mstatus:0x300, mie:0x304, mtvec:0x305, mepc:0x341, mcause:0x342, mip:0x344};
+  var CSRNAME = {}; for (var k in CSR) CSRNAME[CSR[k]] = k;
+  function reg(s) {
+    s = s.trim().toLowerCase();
+    var m = /^x(\d+)$/.exec(s);
+    if (m && +m[1] < 32) return +m[1];
+    if (s in REG) return REG[s];
+    throw new Error('bad register "' + s + '"');
+  }
+  function num(s) {
+    s = s.trim().toLowerCase();
+    var neg = s[0] === '-'; if (neg || s[0] === '+') s = s.slice(1);
+    var v = /^0x[0-9a-f]+$/.test(s) ? parseInt(s, 16) : /^\d+$/.test(s) ? parseInt(s, 10) : NaN;
+    if (isNaN(v)) throw new Error('bad number "' + s + '"');
+    return neg ? -v : v;
+  }
+  function memop(s) { var m = /^(.*)\((.+)\)$/.exec(s.trim()); if (!m) throw new Error('expected imm(rs1)'); return [m[1].trim() ? num(m[1]) : 0, reg(m[2])]; }
+  function R(f7, rs2, rs1, f3, rd, op) { return ((f7 << 25) | (rs2 << 20) | (rs1 << 15) | (f3 << 12) | (rd << 7) | op) >>> 0; }
+  function I(imm, rs1, f3, rd, op) { return (((imm & 0xFFF) << 20) | (rs1 << 15) | (f3 << 12) | (rd << 7) | op) >>> 0; }
+  function S(imm, rs2, rs1, f3, op) { return ((((imm >> 5) & 0x7F) << 25) | (rs2 << 20) | (rs1 << 15) | (f3 << 12) | ((imm & 0x1F) << 7) | op) >>> 0; }
+  function B(imm, rs2, rs1, f3) { return ((((imm >> 12) & 1) << 31) | (((imm >> 5) & 0x3F) << 25) | (rs2 << 20) | (rs1 << 15) | (f3 << 12) | (((imm >> 1) & 0xF) << 8) | (((imm >> 11) & 1) << 7) | 0x63) >>> 0; }
+  function J(imm, rd) { return ((((imm >> 20) & 1) << 31) | (((imm >> 1) & 0x3FF) << 21) | (((imm >> 11) & 1) << 20) | (((imm >> 12) & 0xFF) << 12) | (rd << 7) | 0x6F) >>> 0; }
+  var RT = {add:[0,0], sub:[0x20,0], sll:[0,1], slt:[0,2], sltu:[0,3], xor:[0,4], srl:[0,5], sra:[0x20,5], or:[0,6], and:[0,7]};
+  var IT = {addi:0, slti:2, sltiu:3, xori:4, ori:6, andi:7};
+  var SH = {slli:[0,1], srli:[0,5], srai:[0x20,5]};
+  var LD = {lb:0, lh:1, lw:2, lbu:4, lhu:5};
+  var ST = {sb:0, sh:1, sw:2};
+  var BR = {beq:0, bne:1, blt:4, bge:5, bltu:6, bgeu:7};
+  var CS = {csrrw:1, csrrs:2, csrrc:3, csrrwi:5, csrrsi:6, csrrci:7};
+
+  function assemble(text) {
+    var t = text.trim().replace(/#.*$/, '').trim();
+    if (/^(0x)?[0-9a-f]{8}$/i.test(t)) return parseInt(t.replace(/^0x/i, ''), 16) >>> 0;
+    var m = /^([a-z.]+)\s*(.*)$/i.exec(t);
+    if (!m) throw new Error('type an instruction or 8 hex digits');
+    // operands separated by commas and/or spaces: "addi x1, x0, 125" = "addi x1 x0 125"; "8 ( x2 )" = "8(x2)"
+    var ops = m[2].replace(/\s*\(\s*/g, '(').replace(/\s*\)/g, ')').trim();
+    var mn = m[1].toLowerCase(), a = ops ? ops.split(/\s*,\s*|\s+/).filter(Boolean) : [];
+    function need(n) { if (a.length !== n) throw new Error(mn + ' takes ' + n + ' operand' + (n === 1 ? '' : 's') + ', got ' + a.length); }
+    function csr(s) { s = s.toLowerCase(); if (s in CSR) return CSR[s]; return num(s) & 0xFFF; }
+    if (mn in RT) { need(3); return R(RT[mn][0], reg(a[2]), reg(a[1]), RT[mn][1], reg(a[0]), 0x33); }
+    if (mn in IT) { need(3); return I(num(a[2]), reg(a[1]), IT[mn], reg(a[0]), 0x13); }
+    if (mn in SH) { need(3); return R(SH[mn][0], num(a[2]) & 31, reg(a[1]), SH[mn][1], reg(a[0]), 0x13); }
+    if (mn in LD) { need(2); var p = memop(a[1]); return I(p[0], p[1], LD[mn], reg(a[0]), 0x03); }
+    if (mn in ST) { need(2); var q = memop(a[1]); return S(q[0], reg(a[0]), q[1], ST[mn], 0x23); }
+    if (mn in BR) { need(3); return B(num(a[2]), reg(a[1]), reg(a[0]), BR[mn]); }
+    if (mn in CS) { need(3); var src = mn.slice(-1) === 'i' ? num(a[2]) & 31 : reg(a[2]); return I(csr(a[1]), src, CS[mn], reg(a[0]), 0x73); }
+    switch (mn) {
+      case 'jal': if (a.length === 1) return J(num(a[0]), 1); need(2); return J(num(a[1]), reg(a[0]));
+      case 'jalr':
+        if (a.length === 1) return I(0, reg(a[0]), 0, 1, 0x67);
+        if (a.length === 2) { var r = memop(a[1]); return I(r[0], r[1], 0, reg(a[0]), 0x67); }
+        need(3); return I(num(a[2]), reg(a[1]), 0, reg(a[0]), 0x67);
+      case 'lui': need(2); return ((num(a[1]) & 0xFFFFF) << 12 | reg(a[0]) << 7 | 0x37) >>> 0;
+      case 'auipc': need(2); return ((num(a[1]) & 0xFFFFF) << 12 | reg(a[0]) << 7 | 0x17) >>> 0;
+      case 'nop': return I(0, 0, 0, 0, 0x13);
+      case 'mv': need(2); return I(0, reg(a[1]), 0, reg(a[0]), 0x13);
+      case 'li': need(2); return I(num(a[1]), 0, 0, reg(a[0]), 0x13);
+      case 'j': need(1); return J(num(a[0]), 0);
+      case 'ret': return I(0, 1, 0, 0, 0x67);
+      case 'csrr': need(2); return I(csr(a[1]), 0, 2, reg(a[0]), 0x73);
+      case 'csrw': need(2); return I(csr(a[0]), reg(a[1]), 1, 0, 0x73);
+      case 'mret': return 0x30200073;
+      case 'ecall': return 0x00000073;
+      case 'ebreak': return 0x00100073;
+      case 'fence': return 0x0FF0000F;
+    }
+    throw new Error('unknown instruction "' + mn + '"');
+  }
+
+  function fields(w) {
+    return {op: w & 0x7F, rd: (w >>> 7) & 31, f3: (w >>> 12) & 7, rs1: (w >>> 15) & 31, rs2: (w >>> 20) & 31, f7: (w >>> 25) & 0x7F, csr: (w >>> 20) & 0xFFF};
+  }
+  function sext(v, bits) { var s = 32 - bits; return (v << s) >> s; }
+  function immOf(w, src) {
+    switch (src) {
+      case 0: return sext(w >>> 20, 12);
+      case 1: return sext(((w >>> 25) << 5) | ((w >>> 7) & 31), 12);
+      case 2: return sext((((w >>> 31) & 1) << 12) | (((w >>> 7) & 1) << 11) | (((w >>> 25) & 0x3F) << 5) | (((w >>> 8) & 0xF) << 1), 13);
+      case 3: return sext((((w >>> 31) & 1) << 20) | (((w >>> 12) & 0xFF) << 12) | (((w >>> 20) & 1) << 11) | (((w >>> 21) & 0x3FF) << 1), 21);
+      case 4: return (w & 0xFFFFF000) | 0;
+    }
+    return 0;
+  }
+  function disasm(w) {
+    var f = fields(w), c = controlUnit(f.op, f.f3, f.f7, f.rs1);
+    if (c.Illegal) return '(not supported)';
+    var x = function (r) { return 'x' + r; };
+    function find(tab, v) { for (var k in tab) { var e = tab[k]; if ((Array.isArray(e) ? e.join() : String(e)) === (Array.isArray(v) ? v.join() : String(v))) return k; } return '?'; }
+    switch (f.op) {
+      case 0x33: return find(RT, [f.f7, f.f3]) + ' ' + x(f.rd) + ', ' + x(f.rs1) + ', ' + x(f.rs2);
+      case 0x13: if (f.f3 === 1 || f.f3 === 5) return find(SH, [f.f7, f.f3]) + ' ' + x(f.rd) + ', ' + x(f.rs1) + ', ' + f.rs2;
+                 return find(IT, f.f3) + ' ' + x(f.rd) + ', ' + x(f.rs1) + ', ' + immOf(w, 0);
+      case 0x03: return find(LD, f.f3) + ' ' + x(f.rd) + ', ' + immOf(w, 0) + '(' + x(f.rs1) + ')';
+      case 0x23: return find(ST, f.f3) + ' ' + x(f.rs2) + ', ' + immOf(w, 1) + '(' + x(f.rs1) + ')';
+      case 0x63: return find(BR, f.f3) + ' ' + x(f.rs1) + ', ' + x(f.rs2) + ', ' + immOf(w, 2);
+      case 0x6F: return 'jal ' + x(f.rd) + ', ' + immOf(w, 3);
+      case 0x67: return 'jalr ' + x(f.rd) + ', ' + immOf(w, 0) + '(' + x(f.rs1) + ')';
+      case 0x37: return 'lui ' + x(f.rd) + ', 0x' + (w >>> 12).toString(16);
+      case 0x17: return 'auipc ' + x(f.rd) + ', 0x' + (w >>> 12).toString(16);
+      case 0x73: if (c.MRET) return 'mret';
+                 return find(CS, f.f3) + ' ' + x(f.rd) + ', ' + (CSRNAME[f.csr] || '0x' + f.csr.toString(16)) + ', ' + x(f.rs1);
+    }
+    return '?';
+  }
+
+  var REGION = {ram:'000', rom:'001', uart:'010', plic:'011', clint:'100', gpio:'101', other:'101'};
+  // Everything the diagram shows for one instruction: ControlUnit outputs, controlblock logic, MMIO selects.
+  function evaluate(w, ctx) {
+    ctx = ctx || {};
+    var f = fields(w), c = controlUnit(f.op, f.f3, f.f7, f.rs1), s = {};
+    for (var k in c) s[k] = c[k];
+    s.RegWrite_I = c.RegWrite; s.MemWrite_I = c.Mem_Write;
+    s.irq = ctx.irq ? 1 : 0; s.MIE = ctx.mie ? 1 : 0; s.MEIE = ctx.meie ? 1 : 0;
+    s.TRAP = s.irq & s.MIE & s.MEIE;
+    s.RegWrite = c.RegWrite & (1 - s.TRAP);
+    s.MemWrite = c.Mem_Write & (1 - s.TRAP);
+    var taken = c.Branch ? (ctx.taken ? 1 : 0) : 0;
+    s.Zero = c.Branch ? (taken ^ (f.f3 & 1) ^ ((f.f3 >> 2) & 1)) : null;
+    s.PCsrc = s.TRAP ? 2 : c.MRET ? 3 : (taken || c.Jump) ? 1 : 0;
+    var off = 0;
+    if (c.Mem_Write) off = immOf(w, 1) & 3; else if (c.Result_Src === 1) off = immOf(w, 0) & 3;
+    var we = 0;
+    if (s.MemWrite) {
+      if (f.f3 === 2 && off === 0) we = 15;
+      else if (f.f3 === 1 && (off === 0 || off === 2)) we = 3 << off;
+      else if (f.f3 === 0) we = 1 << off;
+    }
+    s.WE = we;
+    s.intersel = ctx.pc === 'rom' ? 0 : ctx.pc === 'none' ? 2 : 1;
+    var mem = ctx.mem || 'ram';
+    s.RDsel = parseInt(REGION[mem], 2);
+    s.WE3M_1 = mem === 'ram' ? we : 0;
+    s.memAccess = (c.Mem_Write || c.Result_Src === 1) && !s.TRAP;
+    s.load = c.Result_Src === 1 && s.RegWrite;
+    s.csrWrite = c.CSRwrite && !s.TRAP && !c.MRET;
+    s.f = f; s.imm = immOf(w, c.ImmSrc); s.off = off; s.taken = taken;
+    return s;
+  }
+  var WIDTH = {RegWrite:1, ASrc:2, BSrc:1, Illegal:1, Branch:1, ImmSrc:3, Mem_Write:1, Result_Src:2, alu_control:4, CSRwrite:1, CSRop:2, MRET:1,
+               JalrReg:1, Jump:1, RegWrite_I:1, MemWrite_I:1, MemWrite:1, irq:1, MIE:1, MEIE:1, TRAP:1, Zero:1, PCsrc:2, WE:4, intersel:2, RDsel:3, WE3M_1:4};
+
+  var api = {controlUnit: controlUnit, assemble: assemble, disasm: disasm, fields: fields, evaluate: evaluate, WIDTH: WIDTH};
+  if (typeof module !== 'undefined') module.exports = api; else window.RV = api;
+})();
+</script>
+
+<!-- ================================================================ UI -->
+<script>
+(function () {
+'use strict';
+const M = JSON.parse(document.getElementById('model').textContent);
+const RV = window.RV;
+const NS = 'http://www.w3.org/2000/svg';
+const $ = (s) => document.querySelector(s);
+const svg = $('#cv'), vp = $('#vp');
+const VIEWS = {}; M.views.forEach(v => VIEWS[v.id] = v);
+
+// ------------------------------------------------------------ geometry
+function el(tag, attrs, parent, text) {
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) if (attrs[k] !== undefined) e.setAttribute(k, attrs[k]);
+  if (text !== undefined) e.textContent = text;
+  if (parent) parent.appendChild(e);
+  return e;
+}
+function parsePins(b) {
+  const pins = {};
+  if (b.port) { pins.p = {side: b.face}; return pins; }
+  const len = {l: b.h, r: b.h, t: b.w, b: b.w};
+  for (const side of ['l', 'r', 't', 'b']) {
+    const list = (b.pins && b.pins[side]) || [];
+    list.forEach((s, i) => {
+      const [n, at] = s.split('@');
+      pins[n] = {side, at: at !== undefined ? +at : (i + 1) * len[side] / (list.length + 1)};
+    });
+  }
+  return pins;
+}
+function slope(b) {
+  if (b.shape === 'mux') return 0.15 * b.h;
+  if (b.shape === 'alu' || b.shape === 'adder') return 0.2 * b.h;
+  return 0;
+}
+function pinXY(b, name) {
+  const p = b._pins[name];
+  if (!p) throw new Error('no pin ' + b.id + '.' + name);
+  if (b.port) return {x: b.x, y: b.y, side: p.side};
+  const k = slope(b), f = p.at / b.w;
+  let x, y;
+  switch (p.side) {
+    case 'l': x = b.x; y = b.y + p.at; break;
+    case 'r': x = b.x + b.w; y = b.y + p.at; break;
+    case 't': x = b.x + p.at; y = b.y + (b.flip ? k * (1 - f) : k * f); break;
+    case 'b': x = b.x + p.at; y = b.y + b.h - (b.flip ? k * (1 - f) : k * f); break;
+  }
+  return {x, y, side: p.side};
+}
+function blockOf(view, ref) {
+  const i = ref.lastIndexOf('.');
+  const b = view._byId[ref.slice(0, i)];
+  if (!b) throw new Error('no block in ' + ref);
+  return [b, ref.slice(i + 1)];
+}
+const isPin = (t) => /^[A-Za-z_]\w*\.\w+$/.test(t);
+
+// path tokens -> points, junction dots, end labels
+function routePath(view, toks) {
+  const pts = []; let cur, dot = null, label = null, endPin = null, startPin = null;
+  let i = 0;
+  if (toks[0][0] === '@') { const [x, y] = toks[0].slice(1).split(',').map(Number); cur = {x, y}; dot = {x, y}; }
+  else { const [b, n] = blockOf(view, toks[0]); cur = pinXY(b, n); startPin = toks[0]; }
+  pts.push({x: cur.x, y: cur.y}); i = 1;
+  const go = (x, y) => { const l = pts[pts.length - 1]; if (l.x !== x || l.y !== y) pts.push({x, y}); };
+  const midDefault = toks.length === 2 && isPin(toks[0]) && isPin(toks[1]);
+  for (; i < toks.length; i++) {
+    const t = toks[i];
+    if (t[0] === '#') { label = t.slice(1); continue; }
+    if (t.startsWith('x:')) { go(+t.slice(2), pts[pts.length - 1].y); continue; }
+    if (t.startsWith('y:')) { go(pts[pts.length - 1].x, +t.slice(2)); continue; }
+    const [b, n] = blockOf(view, t); const p = pinXY(b, n); endPin = t;
+    const l = pts[pts.length - 1];
+    if (p.side === 'l' || p.side === 'r') {
+      if (midDefault && l.y !== p.y) { const mx = Math.round((l.x + p.x) / 2); go(mx, l.y); go(mx, p.y); }
+      go(pts[pts.length - 1].x, p.y); go(p.x, p.y);
+    } else { go(p.x, pts[pts.length - 1].y); go(p.x, p.y); }
+  }
+  return {pts, dot, label, endPin, startPin};
+}
+const outward = {l: [-1, 0], r: [1, 0], t: [0, -1], b: [0, 1]};
+
+// ------------------------------------------------------------ netlist helpers
+function prepView(v) {
+  v._byId = {};
+  for (const b of v.blocks) { b._pins = parsePins(b); v._byId[b.id] = b; }
+  v._pinWire = {};
+  for (const w of v.wires) {
+    w._pins = [];
+    for (const p of w.paths || []) for (const t of p) if (isPin(t)) w._pins.push(t);
+    for (const t of w.stubs || []) w._pins.push(t);
+    if (w.pin) w._pins.push(w.pin);
+    for (const p of w._pins) v._pinWire[p] = w;
+  }
+  const root = M.entities[v.entity];
+  for (const w of v.wires) {
+    w._driver = null; w._width = 1;
+    for (const ref of w._pins) {
+      const [b, n] = blockOf(v, ref);
+      const d = pinDir(v, b, n, root);
+      if (d === 'out') { w._driver = ref; w._width = pinWidth(v, b, n, root); }
+    }
+  }
+}
+function pinDir(v, b, n, root) {
+  if (b.port) { const p = root.ports.find(p => p[0] === b.port); return p[1] === 'in' ? 'out' : 'in'; }
+  if (b.logic) return n === b.logic.out ? 'out' : 'in';
+  const p = M.entities[b.entity].ports.find(p => p[0] === n); return p ? p[1] : 'in';
+}
+function pinWidth(v, b, n, root) {
+  if (b.port) return root.ports.find(p => p[0] === b.port)[2];
+  if (b.logic) return n === 'pcsrc' ? 2 : 1;
+  return M.entities[b.entity].ports.find(p => p[0] === n)[2];
+}
+M.views.forEach(prepView);
+
+// ------------------------------------------------------------ rendering
+let view = null, state = null, selBlock = null;
+function render() {
+  vp.innerHTML = '';
+  const v = view;
+  const fr = v.frame;
+  el('rect', {class: 'frame', x: fr[0], y: fr[1], width: fr[2], height: fr[3], rx: 14}, vp);
+  el('text', {class: 'frame-t', x: fr[0] + 18, y: fr[1] + fr[3] - 16}, vp, v.title);
+  const gW = el('g', {}, vp), gB = el('g', {}, vp), gBadge = el('g', {}, vp);
+  for (const w of v.wires) drawWire(v, w, gW);
+  for (const b of v.blocks) drawBlock(v, b, gB);
+  v._gBadge = gBadge;
+  applyState();
+}
+function drawWire(v, w, g) {
+  const cls = ['w', w.kind || 'data'];
+  if (w._width > 1 && !w.kind) cls.push('bus');
+  if (w.konst !== undefined) cls.push('konst'); if (w.open) cls.push('open');
+  const wg = el('g', {class: cls.join(' '), 'data-w': w.id}, g);
+  w._el = wg; w._badgeAt = null;
+  if (w.konst !== undefined || w.open) {
+    const [b, n] = blockOf(v, w.pin); const p = pinXY(b, n); const o = outward[p.side];
+    el('line', {x1: p.x, y1: p.y, x2: p.x + o[0] * 26, y2: p.y + o[1] * 26}, wg);
+    el('text', {x: p.x + o[0] * 32, y: p.y + 4, 'text-anchor': o[0] < 0 ? 'end' : 'start'}, wg, w.open ? 'open' : w.konst);
+    return;
+  }
+  const hitD = []; w._paths = [];
+  for (const toks of w.paths || []) {
+    const r = routePath(v, toks);
+    const pe = {r, els: []}; w._paths.push(pe);
+    const d = 'M' + r.pts.map(p => p.x + ',' + p.y).join(' L');
+    hitD.push(d);
+    const isEndIn = r.endPin && pinDir(v, ...blockOf(v, r.endPin), M.entities[v.entity]) === 'in';
+    pe.els.push(el('path', {d, 'marker-end': isEndIn ? 'url(#ar)' : undefined}, wg));
+    if (r.dot) pe.els.push(el('circle', {cx: r.dot.x, cy: r.dot.y, r: 4.5}, wg));
+    if (r.label) {
+      const e = r.pts[r.pts.length - 1], q = r.pts[r.pts.length - 2] || e;
+      const horiz = q.y === e.y;
+      el('text', horiz ? {x: e.x - 8, y: e.y - 6, 'text-anchor': 'end', style: 'font-size:11px'} : {x: e.x + 6, y: e.y + (e.y > q.y ? -10 : 18), style: 'font-size:11px'}, wg, r.label);
+    }
+    if (r.startPin && !w._badgeAt) {
+      const a = r.pts[0], b2 = r.pts[1] || a;
+      w._badgeAt = {x: a.x, y: a.y, dx: Math.sign(b2.x - a.x), dy: Math.sign(b2.y - a.y)};
+      if (w.label && !blockOf(v, r.startPin)[0].port) {
+        const dx = Math.sign(b2.x - a.x), dy = Math.sign(b2.y - a.y);
+        if (dy === 0) el('text', {x: a.x + (dx >= 0 ? 10 : -10), y: a.y - 7, 'text-anchor': dx >= 0 ? 'start' : 'end'}, wg, w.label);
+        else el('text', {x: a.x + 7, y: a.y + dy * 18}, wg, w.label);
+      }
+    }
+  }
+  // parent of a junction path = the path whose polyline passes through the junction
+  for (const pe of w._paths) {
+    pe.parent = null;
+    if (!pe.r.dot) continue;
+    const {x, y} = pe.r.dot;
+    pe.parent = w._paths.find(q => q !== pe && q.r.pts.some((a, i) => { const b = q.r.pts[i + 1]; if (!b) return false;
+      return (a.x === b.x && a.x === x && y >= Math.min(a.y, b.y) && y <= Math.max(a.y, b.y)) || (a.y === b.y && a.y === y && x >= Math.min(a.x, b.x) && x <= Math.max(a.x, b.x)); })) || null;
+  }
+  for (const ref of w.stubs || []) {
+    const [b, n] = blockOf(v, ref); const p = pinXY(b, n); const o = outward[p.side];
+    const L = b.port ? 34 : 22;
+    const x2 = p.x + o[0] * L, y2 = p.y + o[1] * L;
+    el('line', {x1: p.x, y1: p.y, x2, y2}, wg);
+    hitD.push(`M${p.x},${p.y} L${x2},${y2}`);
+    el('text', {x: x2 + (o[0] ? o[0] * 4 : 4), y: y2 + (o[1] ? o[1] * 12 + 4 : 4), 'text-anchor': o[0] < 0 ? 'end' : 'start', style: 'font-size:11px'}, wg, w.label || w.id);
+  }
+  for (const d of hitD) el('path', {class: 'hit', d}, wg);
+  wg.addEventListener('mouseenter', (ev) => { wg.classList.add('hl'); showTip(ev, wireTip(v, w)); });
+  wg.addEventListener('mousemove', (ev) => moveTip(ev));
+  wg.addEventListener('mouseleave', () => { wg.classList.remove('hl'); hideTip(); });
+  wg.addEventListener('click', (ev) => { ev.stopPropagation(); openWireCard(v, w); });
+}
+function drawBlock(v, b, g) {
+  const grp = el('g', {class: 'blk', 'data-b': b.id}, g);
+  b._el = grp;
+  const fill = `var(--g-${b.port ? 'port' : b.group})`;
+  const {x, y, w, h} = b;
+  if (b.port) {
+    const s = b.face, o = outward[s];
+    // small pentagon pointing along the wire direction for inputs, against it for outputs
+    const root = M.entities[v.entity]; const dir = root.ports.find(p => p[0] === b.port)[1];
+    const L = 24, H = 9; const sx = x - o[0] * L, sy = y - o[1] * L;
+    let pts;
+    if (o[1] === 0) pts = [[sx, sy - H], [sx + o[0] * (L - 9), sy - H], [x, y], [sx + o[0] * (L - 9), sy + H], [sx, sy + H]];
+    else pts = [[sx - H, sy], [sx - H, sy + o[1] * (L - 9)], [x, y], [sx + H, sy + o[1] * (L - 9)], [sx + H, sy]];
+    el('polygon', {class: 'b', points: pts.map(p => p.join(',')).join(' '), fill}, grp);
+    const tx = o[1] === 0 ? (sx + x) / 2 : sx + 14, ty = o[1] === 0 ? sy - 16 : sy - o[1] * 2 + 4;
+    el('text', {class: 'p', x: tx, y: ty, 'text-anchor': o[1] === 0 ? (o[0] > 0 ? 'start' : 'end') : 'start', style: 'font-size:13px;font-weight:600;fill:var(--ink)'}, grp, b.label);
+  } else if (b.shape === 'mux') {
+    const k = slope(b);
+    const pts = b.flip ? [[x, y + k], [x + w, y], [x + w, y + h], [x, y + h - k]] : [[x, y], [x + w, y + k], [x + w, y + h - k], [x, y + h]];
+    el('polygon', {class: 'b', points: pts.map(p => p.join(',')).join(' '), fill}, grp);
+    el('text', {class: 'e', x: x + w / 2, y: y + h + 18, style: 'font-size:12.5px;font-weight:600;fill:var(--ink)'}, grp, b.label);
+  } else if (b.shape === 'alu' || b.shape === 'adder') {
+    const k = slope(b);
+    const pts = [[x, y], [x + w, y + k], [x + w, y + h - k], [x, y + h], [x, y + h * 0.6], [x + w * 0.28, y + h / 2], [x, y + h * 0.4]];
+    el('polygon', {class: 'b', points: pts.map(p => p.join(',')).join(' '), fill}, grp);
+    el('text', {class: 't', x: x + w * 0.62, y: y + h / 2, style: b.shape === 'adder' ? 'font-size:22px' : ''}, grp, b.label);
+  } else if (b.shape === 'gate') {
+    const r = h / 2;
+    el('path', {class: 'b', d: `M${x},${y} H${x + w - r} A${r},${r} 0 0 1 ${x + w - r},${y + h} H${x} Z`, fill}, grp);
+    el('text', {class: 't', x: x + (w - r) / 2 + 6, y: y + h / 2, style: 'font-size:15px'}, grp, b.label);
+    for (const n of b.inv || []) { const p = pinXY(b, n); el('circle', {class: 'b', cx: p.x + 5, cy: p.y, r: 4, fill: 'var(--blk)', 'stroke-width': 1.6}, grp); }
+  } else {
+    el('rect', {class: 'b', x, y, width: w, height: h, rx: b.shape === 'logic' ? 14 : 4, fill, 'stroke-dasharray': b.shape === 'logic' ? '6 4' : undefined}, grp);
+    if (b.shape === 'reg') el('polyline', {class: 'b', points: `${x + w / 2 - 10},${y + h} ${x + w / 2},${y + h - 12} ${x + w / 2 + 10},${y + h}`, fill: 'none', 'stroke-width': 1.6}, grp);
+    const cy = b.small ? y + h / 2 : y + Math.min(h / 2, 46);
+    el('text', {class: 't', x: x + w / 2, y: cy, style: b.small ? 'font-size:14px' : ''}, grp, b.label);
+    if (b.sub) el('text', {class: 'e', x: x + w / 2, y: cy + 22}, grp, b.sub);
+    if (b.entity && !b.small && b.shape !== 'reg' && b.label !== b.entity) el('text', {class: 'e', x: x + w / 2, y: y + h - 10, style: 'font-style:italic'}, grp, b.entity + '.vhd');
+  }
+  // pin names (inside rect-like blocks) and mux codes
+  if (!b.port && (b.shape === 'rect' || b.shape === 'logic' || b.shape === 'reg') && !b.small) {
+    for (const n in b._pins) {
+      const p = pinXY(b, n); const s = b.short && n in b.short ? b.short[n] : n; if (!s) continue;
+      const a = {l: [8, 4, 'start'], r: [-8, 4, 'end'], t: [0, 15, 'middle'], b: [0, -7, 'middle']}[p.side];
+      if (b.shape === 'reg') continue;
+      el('text', {class: 'p', x: p.x + a[0], y: p.y + a[1], 'text-anchor': a[2]}, grp, s);
+    }
+  }
+  for (const n in b.codes || {}) {
+    const p = pinXY(b, n);
+    el('text', {class: 'code', x: p.x + (b.flip ? -6 : 6), y: p.y + 4, 'text-anchor': b.flip ? 'end' : 'start'}, grp, b.codes[n]);
+  }
+  for (const d of b.deco || []) {
+    const y2 = y + d.at;
+    el('line', {x1: x - 22, y1: y2, x2: x, y2, stroke: 'var(--clk)', 'stroke-width': 1.8}, grp);
+    el('text', {class: 'p', x: x - 26, y: y2 + 4, 'text-anchor': 'end', style: 'font-size:13px'}, grp, d.text);
+    if (d.code) el('text', {class: 'code', x: x + 6, y: y2 + 4}, grp, d.code);
+  }
+  grp.addEventListener('click', (ev) => { ev.stopPropagation(); openBlockCard(v, b); });
+  grp.addEventListener('dblclick', (ev) => { ev.stopPropagation(); const e = b.entity && M.entities[b.entity]; if (e && e.drill) setView(e.drill); });
+}
+
+// ------------------------------------------------------------ trace (which wires carry this instruction)
+function bits(v, n) { return v === null || v === undefined ? '?' : (v >>> 0).toString(2).padStart(n, '0'); }
+function wireValue(w) {
+  if (!state || !w.sig) return undefined;
+  const v = state.s[w.sig];
+  if (v === undefined) return undefined;
+  return bits(v, RV.WIDTH[w.sig] || 1);
+}
+function depsOf(v, b, outPin) {
+  if (b.port) return [];
+  if (b.mux) {
+    const selW = v._pinWire[b.id + '.' + b.mux.sel];
+    const val = selW ? wireValue(selW) : undefined;
+    const pick = val !== undefined ? b.mux.map[val] : undefined;
+    return [b.mux.sel].concat(pick ? [pick] : []);
+  }
+  if (b.logic) {
+    const s = state.s;
+    if (b.id === 'pcsrc') {
+      if (s.TRAP) return ['trap_ins'];
+      if (s.MRET) return ['trap_ins', 'mret_r'];
+      if (s.Branch) return ['trap_ins', 'mret_r', 'branch', 'zero', 'instr'];
+      if (s.Jump) return ['trap_ins', 'mret_r', 'branch', 'jump'];
+      return ['trap_ins', 'mret_r', 'branch', 'jump'];
+    }
+    return b.logic.in.slice();
+  }
+  const deps = (b.deps) || M.entities[b.entity].deps || {};
+  if (deps[outPin]) return deps[outPin];
+  if (deps['*']) return deps['*'];
+  return M.entities[b.entity].ports.filter(p => p[1] === 'in' && p[0] !== 'clk' && p[0] !== 'rst').map(p => p[0]);
+}
+function sinks(vid, s) {
+  const out = [];
+  if (vid === 'core') {
+    out.push('pc.PCNext', 'P_PC.p', 'cu.opcode', 'cu.funct3', 'cu.funct7');
+    if (s.f.op === 0x73) out.push('cu.rs1');
+    if (s.RegWrite) out.push('rf.write_In', 'rf.write_idx', 'rf.write_en');
+    if (s.MemWrite) out.push('P_WE.p', 'P_WD.p', 'P_rez.p');
+    if (s.load) out.push('P_rez.p');
+    if (s.csrWrite) out.push('csr.w_DATA', 'csr.CSRnum', 'csr.CSRwrite', 'csr.CSROp');
+    if (s.TRAP) out.push('csr.TRAP', 'csr.mepc_ret_addr_in');
+    if (s.MRET && !s.TRAP) out.push('csr.MRET');
+    if (s.Illegal) out.push('P_Illegal.p');
+    if (s.irq) out.push('csr.irq');
+  } else {
+    out.push('core.instr');
+    if (s.load) out.push('core.OUT_OF_MEMORY_DATA');
+    if (s.MemWrite) { out.push('mmio.MemWrite'); if (s.WE3M_1) out.push('um.WE', 'um.wD', 'um.address'); }
+    if (s.Illegal) out.push('P_Illegal.p');
+    if (s.irq) out.push('core.irq');
+  }
+  return out;
+}
+function trace(v) {
+  const onW = new Set(), onB = new Set(), seen = new Set(), used = new Set();
+  const stack = sinks(v.id, state.s).filter(p => v._pinWire[p]);
+  for (const p of stack) onB.add(blockOf(v, p)[0].id);
+  while (stack.length) {
+    const ref = stack.pop();
+    if (seen.has(ref)) continue; seen.add(ref); used.add(ref);
+    const w = v._pinWire[ref]; if (!w) continue;
+    onW.add(w.id);
+    if (!w._driver) continue;
+    const [b, n] = blockOf(v, w._driver);
+    onB.add(b.id);
+    for (const d of depsOf(v, b, n)) { const r = b.id + '.' + d; if (v._pinWire[r]) { stack.push(r); onB.add(b.id); } }
+  }
+  return {onW, onB, used};
+}
+function distTo(pts, d) {
+  let L = 0;
+  for (let i = 0; i + 1 < pts.length; i++) {
+    const a = pts[i], b = pts[i + 1];
+    const on = (a.x === b.x && a.x === d.x && d.y >= Math.min(a.y, b.y) && d.y <= Math.max(a.y, b.y)) || (a.y === b.y && a.y === d.y && d.x >= Math.min(a.x, b.x) && d.x <= Math.max(a.x, b.x));
+    if (on) return L + Math.abs(d.x - a.x) + Math.abs(d.y - a.y);
+    L += Math.abs(b.x - a.x) + Math.abs(b.y - a.y);
+  }
+  return L;
+}
+function prefix(pts, L) {
+  const out = [pts[0]];
+  for (let i = 0; i + 1 < pts.length && L > 0; i++) {
+    const a = pts[i], b = pts[i + 1], s = Math.abs(b.x - a.x) + Math.abs(b.y - a.y);
+    if (s <= L) { out.push(b); L -= s; continue; }
+    out.push({x: a.x + Math.sign(b.x - a.x) * L, y: a.y + Math.sign(b.y - a.y) * L}); break;
+  }
+  return out;
+}
+function applyState() {
+  const v = view;
+  svg.classList.toggle('tracing', !!state);
+  for (const w of v.wires) { w._el.classList.remove('on'); w._el.querySelectorAll('.part').forEach(e => e.remove()); for (const pe of w._paths || []) for (const e of pe.els) e.classList.remove('off'); }
+  for (const b of v.blocks) b._el.classList.remove('on');
+  v._gBadge.innerHTML = '';
+  if (!state) return;
+  const {onW, onB, used} = trace(v);
+  for (const w of v.wires) {
+    if (!onW.has(w.id)) continue;
+    w._el.classList.add('on');
+    // light only what carries the value: full branches that end at a used pin, and the part of each
+    // trunk from the driver up to the farthest junction a used branch hangs off
+    const need = new Map();
+    const bump = (pe, L) => { const c = need.get(pe); if (c === undefined || L > c) need.set(pe, L); };
+    for (const pe of w._paths || []) if (pe.r.endPin && used.has(pe.r.endPin)) {
+      bump(pe, Infinity);
+      for (let q = pe; q.parent; q = q.parent) bump(q.parent, distTo(q.parent.r.pts, q.r.dot));
+    }
+    if (w._paths && w._paths.length && !need.size) bump(w._paths[0], Infinity);
+    for (const pe of w._paths || []) {
+      const L = need.get(pe);
+      if (L === Infinity) continue;
+      for (const e of pe.els) e.classList.add('off');
+      if (L) el('path', {class: 'part', d: 'M' + prefix(pe.r.pts, L).map(p => p.x + ',' + p.y).join(' L')}, w._el);
+    }
+  }
+  for (const b of v.blocks) if (onB.has(b.id)) b._el.classList.add('on');
+  for (const w of v.wires) {
+    const val = wireValue(w);
+    if (val === undefined || !w._badgeAt) continue;
+    const a = w._badgeAt, txt = val;
+    const g = el('g', {class: 'badge' + (onW.has(w.id) ? '' : ' off')}, v._gBadge);
+    const tw = txt.length * 7.6 + 10;
+    let bx = a.x + (a.dx ? a.dx * 12 : 6), by = a.y + (a.dy ? a.dy * 16 : 12);
+    if (a.dx < 0) bx -= tw;
+    el('rect', {x: bx, y: by - 9, width: tw, height: 18, rx: 4}, g);
+    el('text', {x: bx + 5, y: by + 1}, g, txt);
+  }
+}
+
+// ------------------------------------------------------------ pan / zoom
+let T = {x: 0, y: 0, k: 1};
+function setT() { vp.setAttribute('transform', `translate(${T.x},${T.y}) scale(${T.k})`); }
+function fit() {
+  const r = svg.getBoundingClientRect(); const v = view;
+  const k = Math.min(r.width / v.w, r.height / v.h) * 0.98;
+  T = {k, x: (r.width - v.w * k) / 2, y: (r.height - v.h * k) / 2}; setT();
+}
+function zoomAt(f, cx, cy) {
+  const k = Math.max(0.15, Math.min(6, T.k * f)); f = k / T.k;
+  T.x = cx - (cx - T.x) * f; T.y = cy - (cy - T.y) * f; T.k = k; setT();
+}
+svg.addEventListener('wheel', (e) => { e.preventDefault(); const r = svg.getBoundingClientRect(); zoomAt(Math.exp(-e.deltaY * 0.0015), e.clientX - r.left, e.clientY - r.top); }, {passive: false});
+let drag = null;
+svg.addEventListener('pointerdown', (e) => { if (e.button !== 0) return; drag = {x: e.clientX, y: e.clientY, tx: T.x, ty: T.y, moved: false}; });
+window.addEventListener('pointermove', (e) => {
+  if (!drag) return;
+  const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+  if (Math.abs(dx) + Math.abs(dy) > 3) { drag.moved = true; svg.classList.add('drag'); }
+  T.x = drag.tx + dx; T.y = drag.ty + dy; setT();
+});
+window.addEventListener('pointerup', () => { if (drag && drag.moved) svg.addEventListener('click', (e) => e.stopPropagation(), {capture: true, once: true}); drag = null; svg.classList.remove('drag'); });
+svg.addEventListener('click', () => closeCard());
+$('#zin').onclick = () => { const r = svg.getBoundingClientRect(); zoomAt(1.3, r.width / 2, r.height / 2); };
+$('#zout').onclick = () => { const r = svg.getBoundingClientRect(); zoomAt(1 / 1.3, r.width / 2, r.height / 2); };
+$('#zfit').onclick = fit;
+function centerOn(b) {
+  const r = svg.getBoundingClientRect();
+  const k = Math.max(T.k, 0.9);
+  T = {k, x: r.width / 2 - (b.x + (b.w || 0) / 2) * k, y: r.height / 2 - (b.y + (b.h || 0) / 2) * k}; setT();
+}
+
+// ------------------------------------------------------------ tooltip / cards
+const tip = $('#tip');
+function showTip(e, html) { tip.innerHTML = html; tip.style.display = 'block'; moveTip(e); }
+function moveTip(e) { const r = $('main').getBoundingClientRect(); tip.style.left = (e.clientX - r.left + 14) + 'px'; tip.style.top = (e.clientY - r.top + 14) + 'px'; }
+function hideTip() { tip.style.display = 'none'; }
+function pinName(v, ref) {
+  const [b, n] = blockOf(v, ref);
+  if (b.port) return `${v.entity} port <b>${b.port}</b>`;
+  return `${b.label}.${n}`;
+}
+function wireTip(v, w) {
+  const val = wireValue(w);
+  const name = w.label || w.id;
+  return `<b>${name}</b> · ${w._width} bit${val !== undefined ? ' · = ' + val : ''}`;
+}
+const card = $('#card');
+function closeCard() { card.style.display = 'none'; if (selBlock) selBlock._el && selBlock._el.classList.remove('sel'); selBlock = null; }
+function openWireCard(v, w) {
+  closeCard();
+  const val = wireValue(w);
+  const drv = w._driver ? pinName(v, w._driver) : (w.konst !== undefined ? 'constant' : w.open ? 'nothing (open)' : '—');
+  const sinksL = w._pins.filter(p => p !== w._driver).map(p => `<li>${pinName(v, p)}</li>`).join('');
+  card.innerHTML = `<div class="hd"><h3>${w.label || w.id}<div class="meta">signal · ${w._width} bit${w.kind ? ' · ' + w.kind : ''}</div></h3><button class="x">×</button></div>
+    <div class="bd">${val !== undefined ? `<p>Value for the current instruction: <code>${val}</code></p>` : ''}
+    <h4>Driven by</h4><p>${drv}</p><h4>Goes to</h4><ul>${sinksL || '<li>—</li>'}</ul></div>`;
+  card.style.display = 'block'; card.querySelector('.x').onclick = closeCard;
+}
+function openBlockCard(v, b) {
+  closeCard(); selBlock = b; b._el.classList.add('sel');
+  const root = M.entities[v.entity];
+  let h = '';
+  if (b.port) {
+    const p = root.ports.find(p => p[0] === b.port);
+    const w = v._pinWire[b.id + '.p'];
+    h = `<div class="hd"><h3>${b.port}<div class="meta">${p[1]} port of ${v.entity} · ${p[2]} bit</div></h3><button class="x">×</button></div><div class="bd">`;
+    if (w) h += `<p>Signal: <b>${w.label || w.id}</b>${wireValue(w) !== undefined ? ' = <code>' + wireValue(w) + '</code>' : ''}</p>`;
+    if (v.parent) h += `<p><a href="#" data-goto="${v.parent}">↑ see it in ${VIEWS[v.parent].title}</a></p>`;
+    h += '</div>';
+  } else {
+    const e = b.entity ? M.entities[b.entity] : null;
+    const grpEnt = M.entities[b.group];
+    const path = b.inst.replace(/:.*/, '').split('/');
+    const crumbs = [v.entity].concat(path.map(s => s.replace(/_inst$|_muxSRCB_inst$/, '')));
+    h = `<div class="hd"><h3>${b.label}<div class="meta">${e ? `entity <b>${b.entity}</b> · <a href="../${e.file}" target="_blank">${e.file}</a>` : `logic in <a href="../${M.entities.controlblock.file}" target="_blank">controlblock.vhd</a>`}<br>${crumbs.join(' › ')}</div></h3><button class="x">×</button></div><div class="bd">`;
+    if (grpEnt && b.group !== v.entity && b.group !== 'cpu') h += `<span class="chip">part of ${b.group}</span>`;
+    h += `<p>${b.desc || (e && e.desc) || ''}</p>`;
+    if (b.logic) h += `<h4>VHDL</h4><pre style="white-space:pre-wrap;font-size:12px;margin:0"><code>${b.logic.expr.replace(/</g, '&lt;')}</code></pre>`;
+    if (e && e.drill) h += `<p><a href="#" data-goto="${e.drill}">Open inside →</a></p>`;
+    if (e && e.enc) h += `<h4>Encodings</h4><table>${e.enc.map(r => `<tr><td><code>${r[0]}</code></td><td>${r[1]}</td></tr>`).join('')}</table>`;
+    const ports = e ? e.ports : b.logic.in.map(n => [n, 'in', 1]).concat([[b.logic.out, 'out', b.logic.out === 'pcsrc' ? 2 : 1]]);
+    h += `<h4>Ports</h4><table><tr><th>port</th><th></th><th>bits</th><th>signal</th><th></th></tr>`;
+    for (const [n, dir, wd] of ports) {
+      const w = v._pinWire[b.id + '.' + n];
+      const val = w ? wireValue(w) : undefined;
+      h += `<tr><td>${n}</td><td>${dir}</td><td>${wd}</td><td>${w ? (w.konst !== undefined ? 'const ' + w.konst : w.open ? 'open' : (w.label || w.id)) : ''}</td><td class="v">${val !== undefined ? val : ''}</td></tr>`;
+    }
+    h += '</table>';
+    if (e && e.tests) h += `<h4>Tested by</h4><p>${e.tests.map(t => `<code>${t}</code>`).join(' ')}</p>`;
+    h += '</div>';
+  }
+  card.innerHTML = h; card.style.display = 'block';
+  card.querySelector('.x').onclick = closeCard;
+  card.querySelectorAll('[data-goto]').forEach(a => a.onclick = (ev) => { ev.preventDefault(); setView(a.dataset.goto); });
+}
+
+// ------------------------------------------------------------ views, decode box, stories
+function setView(id, keepT) {
+  view = VIEWS[id]; closeCard(); render(); if (!keepT) fit();
+  const c = $('#crumbs'); c.innerHTML = '';
+  const chain = []; for (let v = view; v; v = v.parent && VIEWS[v.parent]) chain.unshift(v);
+  for (const v of M.views) {
+    const b = document.createElement('button'); b.className = 'btn' + (v === view ? ' on' : '');
+    b.textContent = v.id === 'cpu' ? 'cpu' : '› ' + v.id; b.title = v.title;
+    b.onclick = () => setView(v.id); c.appendChild(b);
+  }
+  writeHash();
+}
+function ctxFromUI() {
+  return {taken: $('#cTaken').checked, irq: $('#cIrq').checked, mie: $('#cMie').checked, meie: $('#cMeie').checked, pc: $('#cPc').value, mem: $('#cMem').value};
+}
+function ctxToUI(c) {
+  c = Object.assign({taken: false, irq: false, mie: false, meie: false, pc: 'ram', mem: 'ram'}, c || {});
+  $('#cTaken').checked = c.taken; $('#cIrq').checked = c.irq; $('#cMie').checked = c.mie; $('#cMeie').checked = c.meie; $('#cPc').value = c.pc; $('#cMem').value = c.mem;
+}
+function decodeNow() {
+  const text = $('#asm').value.trim();
+  $('#asmErr').textContent = '';
+  if (!text) { state = null; $('#decoded').textContent = ''; applyState(); writeHash(); return; }
+  let word;
+  try { word = RV.assemble(text); } catch (e) { $('#asmErr').textContent = e.message; return; }
+  const s = RV.evaluate(word, ctxFromUI());
+  state = {word, s, text};
+  const f = s.f;
+  const hex = '0x' + word.toString(16).padStart(8, '0');
+  const lines = [
+    `${hex}  ${RV.disasm(word)}`,
+    `op ${bits(f.op, 7)}  f3 ${bits(f.f3, 3)}  f7 ${bits(f.f7, 7)}`,
+    `rd x${f.rd}  rs1 x${f.rs1}  rs2 x${f.rs2}` + (s.BSrc || s.Branch || s.Jump ? `  imm ${s.imm}` : ''),
+    s.Illegal ? 'Illegal = 1 → no-op' : `RegWrite ${s.RegWrite}  MemWrite ${s.MemWrite}  PCSrc ${bits(s.PCsrc, 2)}`];
+  if (s.TRAP) lines.push('TRAP: irq·MIE·MEIE = 1 → instruction cancelled, PC ← mtvec');
+  else if (s.irq) lines.push(`irq pending but masked (${!s.MIE ? 'MIE = 0' : ''}${!s.MIE && !s.MEIE ? ', ' : ''}${!s.MEIE ? 'MEIE = 0' : ''}) → no trap`);
+  $('#decoded').textContent = lines.join('\n');
+  applyState(); writeHash();
+  if (selBlock) openBlockCard(view, selBlock);
+}
+$('#asm').addEventListener('keydown', (e) => { if (e.key === 'Enter') { stopStory(); decodeNow(); } });
+$('#asm').addEventListener('input', () => { clearTimeout(decodeNow._t); decodeNow._t = setTimeout(decodeNow, 350); });
+for (const id of ['#cTaken', '#cIrq', '#cMie', '#cMeie', '#cPc', '#cMem']) $(id).addEventListener('change', decodeNow);
+$('#clear').onclick = () => { stopStory(); $('#asm').value = ''; decodeNow(); };
+
+let story = null, beat = 0, playT = null;
+const cap = $('#caption');
+function showBeat() {
+  const st = story, b = st.beats[beat];
+  if (view.id !== b.view) setView(b.view);
+  ctxToUI(b.ctx); $('#asm').value = b.asm; decodeNow();
+  cap.style.display = 'block';
+  cap.innerHTML = `<div class="t"><span>${st.title} · ${beat + 1}/${st.beats.length} · <code>${b.asm}</code></span>
+    <button class="btn" id="bPrev">←</button><button class="btn" id="bPlay">${playT ? '❚❚' : '▶'}</button><button class="btn" id="bNext">→</button><button class="btn" id="bClose">×</button></div><div>${b.text}</div>`;
+  $('#bPrev').onclick = () => step(-1); $('#bNext').onclick = () => step(1); $('#bClose').onclick = () => { stopStory(); $('#asm').value = ''; decodeNow(); };
+  $('#bPlay').onclick = () => { if (playT) { clearInterval(playT); playT = null; showBeat(); } else { playT = setInterval(() => step(1, true), 4500); showBeat(); } };
+  document.querySelectorAll('.story').forEach(e => e.classList.toggle('on', e.dataset.id === st.id));
+}
+function step(d, auto) {
+  if (!story) return;
+  let nb = beat + d;
+  if (nb >= story.beats.length) { if (auto) { const i = M.stories.indexOf(story); story = M.stories[(i + 1) % M.stories.length]; nb = 0; } else nb = story.beats.length - 1; }
+  if (nb < 0) nb = 0;
+  beat = nb; showBeat();
+}
+function stopStory() { story = null; if (playT) clearInterval(playT); playT = null; cap.style.display = 'none'; document.querySelectorAll('.story').forEach(e => e.classList.remove('on')); }
+for (const st of M.stories) {
+  const b = document.createElement('button'); b.className = 'story'; b.dataset.id = st.id;
+  b.innerHTML = `${st.title}<small>${st.sub} · ${st.beats.length} step${st.beats.length > 1 ? 's' : ''}</small>`;
+  b.onclick = () => { story = st; beat = 0; showBeat(); };
+  $('#stories').appendChild(b);
+}
+
+// legend
+(function () {
+  const L = $('#legend');
+  L.innerHTML = `<div><span class="sw"></span>32-bit / multi-bit data</div><div><span class="sw" style="border-top-width:2px"></span>1-bit data</div>
+    <div><span class="sw c"></span>control (value badge when decoding)</div><div><span class="sw k"></span>clock / reset, constant, open</div>
+    <div><span class="sw" style="border-color:var(--on);border-top-width:4px"></span>used by the decoded instruction</div>`;
+  const groups = [['DataPath', 'DataPath.vhd blocks'], ['controlblock', 'controlblock.vhd (ControlUnit + logic)'], ['core', 'core.vhd: Write/ReadBlock, core'], ['cpu', 'cpu.vhd: memories, MMIO, muxes']];
+  for (const [g, t] of groups) {
+    const d = document.createElement('div'); d.className = 'grp';
+    d.innerHTML = `<span class="sq" style="background:var(--g-${g})"></span>${t}`;
+    d.onmouseenter = () => view.blocks.forEach(b => b._el.classList.toggle('match', b.group === g));
+    d.onmouseleave = () => view.blocks.forEach(b => b._el.classList.remove('match'));
+    d.onclick = () => { const e = M.entities[g]; const v = g === 'cpu' ? 'cpu' : 'core'; if (view.id !== v) setView(v); const fake = view.blocks.find(b => b.group === g); if (fake && e) { closeCard(); card.innerHTML = `<div class="hd"><h3>${g}<div class="meta"><a href="../${e.file}" target="_blank">${e.file}</a></div></h3><button class="x">×</button></div><div class="bd"><p>${e.desc}</p><h4>Tested by</h4><p>${e.tests.map(t => `<code>${t}</code>`).join(' ')}</p></div>`; card.style.display = 'block'; card.querySelector('.x').onclick = closeCard; } };
+    L.appendChild(d);
+  }
+})();
+
+// search
+const sIn = $('#search'), sOut = $('#results');
+function searchIndex() {
+  const out = [];
+  for (const v of M.views) {
+    for (const b of v.blocks) {
+      const e = b.entity && M.entities[b.entity];
+      out.push({v, b, text: [b.label, b.entity, b.inst, b.port, e && e.desc, b.desc].filter(Boolean).join(' ').toLowerCase(), name: b.port ? `port ${b.port}` : b.label, sub: `${v.id} · ${b.entity || (b.logic ? 'logic' : 'port')}`});
+    }
+    for (const w of v.wires) if (w.paths || w.stubs) out.push({v, w, text: [w.id, w.label, w.sig].filter(Boolean).join(' ').toLowerCase(), name: w.label || w.id, sub: `${v.id} · signal`});
+  }
+  return out;
+}
+const IDX = searchIndex();
+sIn.addEventListener('input', () => {
+  const q = sIn.value.trim().toLowerCase();
+  if (!q) { sOut.style.display = 'none'; return; }
+  const hits = IDX.filter(r => r.text.includes(q)).slice(0, 30);
+  sOut.innerHTML = hits.map((r, i) => `<div data-i="${i}">${r.name} <small>${r.sub}</small></div>`).join('') || '<div><small>no match</small></div>';
+  sOut.style.display = 'block';
+  sOut.querySelectorAll('[data-i]').forEach(d => d.onclick = () => {
+    const r = hits[+d.dataset.i]; sOut.style.display = 'none'; sIn.blur();
+    if (view !== r.v) setView(r.v.id);
+    if (r.b) { centerOn(r.b); openBlockCard(view, r.b); }
+    else { const p = routePath(view, r.w.paths ? r.w.paths[0] : [r.w.stubs[0], r.w.stubs[0]]).pts[0]; centerOn({x: p.x, y: p.y}); openWireCard(view, r.w); r.w._el.classList.add('hl'); setTimeout(() => r.w._el.classList.remove('hl'), 1500); }
+  });
+});
+sIn.addEventListener('keydown', (e) => { if (e.key === 'Enter') { const f = sOut.querySelector('[data-i]'); if (f) f.click(); } if (e.key === 'Escape') { sOut.style.display = 'none'; sIn.blur(); } });
+
+// keys
+document.addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+  if (e.key === '/') { e.preventDefault(); sIn.focus(); }
+  else if (e.key === 'f' || e.key === 'F') fit();
+  else if (e.key === 't' || e.key === 'T') toggleTheme();
+  else if (e.key === 'ArrowRight') step(1);
+  else if (e.key === 'ArrowLeft') step(-1);
+  else if (e.key === 'Escape') { closeCard(); stopStory(); }
+});
+
+// theme
+function toggleTheme() { const d = document.documentElement; d.dataset.theme = d.dataset.theme === 'dark' ? 'light' : 'dark'; localStorage.setItem('rv-theme', d.dataset.theme); }
+$('#theme').onclick = toggleTheme;
+document.documentElement.dataset.theme = localStorage.getItem('rv-theme') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+
+// export: the current view as a standalone SVG (colors resolved)
+$('#export').onclick = () => {
+  const clone = svg.cloneNode(true);
+  const g = clone.querySelector('#vp'); g.removeAttribute('transform');
+  clone.setAttribute('viewBox', `0 0 ${view.w} ${view.h}`); clone.setAttribute('width', view.w); clone.setAttribute('height', view.h);
+  const css = [...document.styleSheets[0].cssRules].map(r => r.cssText).join('\n');
+  const vars = getComputedStyle(document.documentElement);
+  const resolved = css.replace(/var\(--([\w-]+)\)/g, (m, n) => vars.getPropertyValue('--' + n).trim() || m);
+  const st = document.createElementNS(NS, 'style'); st.textContent = resolved; clone.insertBefore(st, clone.firstChild);
+  el('rect', {width: view.w, height: view.h, fill: vars.getPropertyValue('--bg')}, null);
+  const bg = document.createElementNS(NS, 'rect'); bg.setAttribute('width', view.w); bg.setAttribute('height', view.h); bg.setAttribute('fill', vars.getPropertyValue('--bg').trim());
+  clone.insertBefore(bg, g);
+  const blob = new Blob([new XMLSerializer().serializeToString(clone)], {type: 'image/svg+xml'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `riscv_${view.id}.svg`; a.click();
+};
+
+// URL hash: #view=core&asm=lw%20x5,8(x2)&ctx=taken,irq,mie,meie,pc:rom,mem:uart&bare
+function writeHash() {
+  if (writeHash.off) return;
+  const p = new URLSearchParams(); p.set('view', view.id);
+  if (state) {
+    p.set('asm', state.text);
+    const c = ctxFromUI(), parts = [];
+    for (const k of ['taken', 'irq', 'mie', 'meie']) if (c[k]) parts.push(k);
+    if (c.pc !== 'ram') parts.push('pc:' + c.pc); if (c.mem !== 'ram') parts.push('mem:' + c.mem);
+    if (parts.length) p.set('ctx', parts.join(','));
+  }
+  if (document.body.classList.contains('bare')) p.set('bare', '');
+  history.replaceState(null, '', '#' + p.toString());
+}
+function readHash() {
+  const p = new URLSearchParams(location.hash.slice(1));
+  if (p.has('bare')) document.body.classList.add('bare');
+  if (p.get('theme')) document.documentElement.dataset.theme = p.get('theme');
+  const c = {}; for (const t of (p.get('ctx') || '').split(',').filter(Boolean)) { const [k, v] = t.split(':'); c[k] = v === undefined ? true : v; }
+  ctxToUI(c);
+  $('#asm').value = p.get('asm') || '';
+  writeHash.off = true; setView(VIEWS[p.get('view')] ? p.get('view') : 'core'); writeHash.off = false;
+  decodeNow();
+  const sel = p.get('sel') && view._byId[p.get('sel')];
+  if (sel) openBlockCard(view, sel);
+  const st = p.get('story') && M.stories.find(x => x.id === p.get('story'));
+  if (st) { story = st; beat = Math.max(0, Math.min(st.beats.length - 1, (+p.get('beat') || 1) - 1)); showBeat(); }
+}
+window.addEventListener('resize', () => fit());
+readHash();
+})();
+</script>
+</body>
+</html>

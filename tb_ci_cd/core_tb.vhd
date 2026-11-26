@@ -1,356 +1,498 @@
+--------------------------------------------------------------------------------
+-- core_tb : random-program testbench for core against an instruction-level RV32I model
+--
+-- Spec: README "Supported instructions", "CSRs", top-level port meanings, RV32I semantics.
+-- irq = 0 here (interrupts: core_irq_tb).
+--   F1 every supported instruction does what RV32I says: R-type, I-type ALU, lui, auipc,
+--      lb lh lw lbu lhu, sb sh sw, beq bne blt bge bltu bgeu, jal, jalr (bit 0 cleared),
+--      csrrw csrrs csrrc (csrrs/csrrc with rs1 = x0 only read)
+--   F2 misaligned lh/lhu/lw read 0; misaligned sh/sw write nothing (WE = 0000)
+--   F3 store interface: WE = exactly the stored byte lanes, each enabled lane carries the
+--      right byte of rs2; WE = 0000 for every non-store
+--   F4 rez = ALU result: the value for ALU ops, the data address for loads/stores, the
+--      lui/auipc result, rs1-rs2 / slt / sltu for branches (jal/jalr/CSR: not checked)
+--   F5 illegal instructions (fence, ecall, ebreak, csrr*i, bad funct3/funct7, unknown opcode):
+--      Illegal = 1, executed as a no-op: no register write, no store, PC + 4
+--   F6 x0 stays 0 (random rd includes x0)
+--   F7 reset: PC = 0x0000_1000
+--
+-- Program (random per seed): prologue sets x1..x15 to random values and x31 = 0x1000 (jalr
+-- base, never a destination); body of random instructions on x0..x15 with forward branches/
+-- jumps only, so it always terminates; epilogue "add x0, xN, x0" for N = 1..31 exposes every
+-- register on rez (black-box register dump); halt "beq x0, x0, 0".
+-- Load data comes from a memory model that is a pure function of the address.
+-- Checking: PC, Illegal, rez, WE, WD every cycle against the model.
+-- E1 wrong PC prediction must be caught.
+--------------------------------------------------------------------------------
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
-use ieee.math_real.all;
+use work.tb_pkg.all;
+use work.riscv_ref_pkg.all;
 
--- Runs a random program (R-type, I-type, loads, stores, forward beq/bne, jal/jalr, lui/auipc) on the core and compares every cycle
--- with a software model of RV32I: PC, ALU result (rez), the register contents and the store
--- interface (WE byte enables / WD data lanes). Loads (aligned, x0 base) read a memory word that is
--- a pure function of the address; the loaded value is verified through later ALU operations.
 entity core_tb is
-end entity;
+    generic(
+        G_SEED   : positive := 1;
+        G_INJECT : boolean  := true
+    );
+end entity core_tb;
 
 architecture sim of core_tb is
-    constant ROM_SIZE : integer := 1024;
-    constant BASE     : integer := 16#1000#; -- reset vector (boot ROM address)
-    type rom_t is array (0 to ROM_SIZE - 1) of std_logic_vector(31 downto 0);
+    subtype word_t is std_logic_vector(31 downto 0);
+    constant C_PERIOD : time := 10 ns;
+    constant ROM_SIZE : positive := 1024;
+    constant BASE     : natural := 16#1000#;     -- reset vector
+    constant BASE_REG : natural := 31;           -- holds BASE, jalr base register
+    constant N_REG    : natural := 15;           -- random instructions use x0..x15
+    constant NOP      : word_t := x"00000013";
+    constant HALT_W   : word_t := x"00000063";   -- beq x0, x0, 0
+    type rom_t is array (0 to ROM_SIZE - 1) of word_t;
 
-    signal clk     : std_logic := '0';
+    signal clk     : std_logic;
+    signal run     : boolean := true;
+    signal done    : boolean := false;
     signal rst     : std_logic := '1';
-    signal instr   : std_logic_vector(31 downto 0);
-    signal PC      : std_logic_vector(31 downto 0);
+    signal instr   : word_t;
+    signal PC      : word_t;
     signal Illegal : std_logic;
-    signal rez     : std_logic_vector(31 downto 0);
+    signal rez     : word_t;
     signal WE      : std_logic_vector(3 downto 0);
-    signal WD      : std_logic_vector(31 downto 0);
-    signal mem_rd  : std_logic_vector(31 downto 0);
+    signal WD      : word_t;
+    signal mem_rd  : word_t;
+    signal rom     : rom_t := (others => NOP);
+    signal halt_pc : natural := BASE;
 
-    signal rom : rom_t := (others => x"00000013"); -- nop
+    shared variable rnd : tb_rand_t;
 
-    ---------------------------------------------------------------- encoders
-    function enc_r(f7, rs2, rs1, f3, rd : integer) return std_logic_vector is
+    ---------------------------------------------------------------- encoders (assembler)
+    function u(v, n : natural) return std_logic_vector is
     begin
-        return std_logic_vector(to_unsigned(f7, 7)) & std_logic_vector(to_unsigned(rs2, 5)) &
-               std_logic_vector(to_unsigned(rs1, 5)) & std_logic_vector(to_unsigned(f3, 3)) &
-               std_logic_vector(to_unsigned(rd, 5)) & "0110011";
+        return std_logic_vector(to_unsigned(v, n));
     end function;
 
-    function enc_i(imm, rs1, f3, rd : integer) return std_logic_vector is
+    function enc_r(f7, rs2, rs1, f3, rd : natural) return word_t is
     begin
-        return std_logic_vector(to_signed(imm, 12)) & std_logic_vector(to_unsigned(rs1, 5)) &
-               std_logic_vector(to_unsigned(f3, 3)) & std_logic_vector(to_unsigned(rd, 5)) & "0010011";
+        return u(f7, 7) & u(rs2, 5) & u(rs1, 5) & u(f3, 3) & u(rd, 5) & "0110011";
     end function;
 
-    function enc_s(imm, rs2, rs1, f3 : integer) return std_logic_vector is
+    function enc_i(op : std_logic_vector(6 downto 0); imm : integer; rs1, f3, rd : natural) return word_t is
+    begin
+        return std_logic_vector(to_signed(imm, 12)) & u(rs1, 5) & u(f3, 3) & u(rd, 5) & op;
+    end function;
+
+    function enc_s(imm : integer; rs2, rs1, f3 : natural) return word_t is
         variable o : std_logic_vector(11 downto 0) := std_logic_vector(to_signed(imm, 12));
     begin
-        return o(11 downto 5) & std_logic_vector(to_unsigned(rs2, 5)) &
-               std_logic_vector(to_unsigned(rs1, 5)) & std_logic_vector(to_unsigned(f3, 3)) &
-               o(4 downto 0) & "0100011";
+        return o(11 downto 5) & u(rs2, 5) & u(rs1, 5) & u(f3, 3) & o(4 downto 0) & "0100011";
     end function;
 
-    function enc_b(off, rs2, rs1, f3 : integer) return std_logic_vector is
+    function enc_b(off : integer; rs2, rs1, f3 : natural) return word_t is
         variable o : std_logic_vector(12 downto 0) := std_logic_vector(to_signed(off, 13));
     begin
-        return o(12) & o(10 downto 5) & std_logic_vector(to_unsigned(rs2, 5)) &
-               std_logic_vector(to_unsigned(rs1, 5)) & std_logic_vector(to_unsigned(f3, 3)) &
-               o(4 downto 1) & o(11) & "1100011";
+        return o(12) & o(10 downto 5) & u(rs2, 5) & u(rs1, 5) & u(f3, 3) & o(4 downto 1) & o(11) & "1100011";
     end function;
 
-    function enc_l(imm, rs1, f3, rd : integer) return std_logic_vector is
-    begin
-        return std_logic_vector(to_signed(imm, 12)) & std_logic_vector(to_unsigned(rs1, 5)) &
-               std_logic_vector(to_unsigned(f3, 3)) & std_logic_vector(to_unsigned(rd, 5)) & "0000011";
-    end function;
-
-    function enc_j(off, rd : integer) return std_logic_vector is
+    function enc_j(off : integer; rd : natural) return word_t is
         variable o : std_logic_vector(20 downto 0) := std_logic_vector(to_signed(off, 21));
     begin
-        return o(20) & o(10 downto 1) & o(11) & o(19 downto 12) &
-               std_logic_vector(to_unsigned(rd, 5)) & "1101111";
+        return o(20) & o(10 downto 1) & o(11) & o(19 downto 12) & u(rd, 5) & "1101111";
     end function;
 
-    function enc_jalr(imm, rs1, rd : integer) return std_logic_vector is
+    function enc_u(imm20 : natural; rd : natural; op : std_logic_vector(6 downto 0)) return word_t is
     begin
-        return std_logic_vector(to_signed(imm, 12)) & std_logic_vector(to_unsigned(rs1, 5)) &
-               "000" & std_logic_vector(to_unsigned(rd, 5)) & "1100111";
+        return u(imm20, 20) & u(rd, 5) & op;
     end function;
 
-    function enc_u(imm20, rd : integer; opcode : std_logic_vector(6 downto 0)) return std_logic_vector is
+    function enc_csr(csr : std_logic_vector(11 downto 0); rs1, f3, rd : natural) return word_t is
     begin
-        return std_logic_vector(to_unsigned(imm20, 20)) & std_logic_vector(to_unsigned(rd, 5)) & opcode;
+        return csr & u(rs1, 5) & u(f3, 3) & u(rd, 5) & "1110011";
     end function;
 
-    -- memory contents: the word at a (word aligned) address
-    function mem_word(addr : std_logic_vector(31 downto 0)) return std_logic_vector is
+    ---------------------------------------------------------------- data memory model
+    function mem_word(addr : word_t) return word_t is
         variable a : unsigned(31 downto 0) := unsigned(addr(31 downto 2)) & "00";
     begin
         return std_logic_vector(resize(a * unsigned'(x"9E3779B1"), 32) xor x"5A5AC3C3");
     end function;
-
-    -- RV32I load of width/sign given by f3 from the word w at byte offset off (aligned only)
-    function load_model(f3 : std_logic_vector(2 downto 0); w : std_logic_vector(31 downto 0);
-                        off : integer) return std_logic_vector is
-        variable b : std_logic_vector(7 downto 0) := w(8 * off + 7 downto 8 * off);
-        variable h : std_logic_vector(15 downto 0) := (others => '0');
-    begin
-        if off <= 2 then h := w(8 * off + 15 downto 8 * off); end if;
-        case f3 is
-            when "000" => return (31 downto 8 => b(7)) & b;
-            when "100" => return x"000000" & b;
-            when "001" => return (31 downto 16 => h(15)) & h;
-            when "101" => return x"0000" & h;
-            when others => return w;
-        end case;
-    end function;
-
-    ---------------------------------------------------------------- model of the ALU
-    function alu_model(f3 : std_logic_vector(2 downto 0); alt : boolean;
-                       a, b : std_logic_vector(31 downto 0)) return std_logic_vector is
-        variable sh : integer := to_integer(unsigned(b(4 downto 0)));
-        variable lt : std_logic_vector(31 downto 0) := (others => '0');
-    begin
-        case f3 is
-            when "000" =>
-                if alt then return std_logic_vector(unsigned(a) - unsigned(b));
-                else return std_logic_vector(unsigned(a) + unsigned(b)); end if;
-            when "001" => return std_logic_vector(shift_left(unsigned(a), sh));
-            when "010" =>
-                if signed(a) < signed(b) then lt(0) := '1'; end if;
-                return lt;
-            when "011" =>
-                if unsigned(a) < unsigned(b) then lt(0) := '1'; end if;
-                return lt;
-            when "100" => return a xor b;
-            when "101" =>
-                if alt then return std_logic_vector(shift_right(signed(a), sh));
-                else return std_logic_vector(shift_right(unsigned(a), sh)); end if;
-            when "110" => return a or b;
-            when others => return a and b;
-        end case;
-    end function;
 begin
-    clk <= not clk after 5 ns;
+    clock    : tb_clock(clk, C_PERIOD, run);
+    watchdog : tb_watchdog(done, 2 ms);
 
-    -- instruction fetch: combinational ROM placed at BASE
+    -- instruction fetch: combinational ROM at BASE, nop elsewhere
     instr <= rom((to_integer(unsigned(PC)) - BASE) / 4)
-             when to_integer(unsigned(PC)) >= BASE and to_integer(unsigned(PC)) < BASE + 4 * ROM_SIZE
-             else x"00000013";
-
+             when unsigned(PC) >= BASE and unsigned(PC) < BASE + 4 * ROM_SIZE else NOP;
     mem_rd <= mem_word(rez);
 
     dut : entity work.core
         port map(rst => rst, clk => clk, instr => instr, PC => PC, Illegal => Illegal, rez => rez,
                  OUT_OF_MEMORY_DATA => mem_rd, WD => WD, WE => WE, irq => '0');
 
-    ---------------------------------------------------------------- build the program
+    ---------------------------------------------------------------- program generator
     gen : process
-        variable s1 : positive := 42;
-        variable s2 : positive := 4242;
-        variable x : real;
-        variable p : rom_t := (others => x"00000013");
-        variable kind, sel : integer;
-        type pair is array (0 to 1) of integer;
-        type op_table is array (0 to 9) of pair;
-        -- (funct3, funct7) for R-type: add sub sll slt sltu xor srl sra or and
-        constant R_OPS : op_table := ((0,0),(0,32),(1,0),(2,0),(3,0),(4,0),(5,0),(5,32),(6,0),(7,0));
-        constant I_F3  : integer_vector(0 to 7) := (0, 1, 2, 3, 4, 5, 5, 6); -- 8 choices (5 twice = srli/srai)
-        variable f3, lw : integer;
+        variable p   : rom_t := (others => NOP);
+        variable n   : natural := 0;
+        variable f3, kind : natural;
+        type csr_array is array (natural range <>) of std_logic_vector(11 downto 0);
+        constant CSRS : csr_array := (x"300", x"304", x"305", x"341", x"342", x"344", x"340");
+        type word_array is array (natural range <>) of word_t;
+        constant ILLEGALS : word_array := (
+            x"0000000F",  -- fence
+            x"00000073",  -- ecall
+            x"00100073",  -- ebreak
+            x"3005D073",  -- csrrwi
+            x"30516073",  -- csrrsi
+            x"30517073",  -- csrrci
+            x"00004073",  -- SYSTEM funct3 = 4
+            x"02208133",  -- mul (funct7 = 1)
+            x"40209133",  -- sll with funct7 = 0x20
+            x"4020C133",  -- xor with funct7 = 0x20
+            x"0020B183",  -- load funct3 = 3 (ld)
+            x"0020E183",  -- load funct3 = 6
+            x"0020B023",  -- store funct3 = 3 (sd)
+            x"0020C023",  -- store funct3 = 4
+            x"00002063",  -- branch funct3 = 2
+            x"00003063",  -- branch funct3 = 3
+            x"00009067",  -- jalr funct3 = 1
+            x"40209093",  -- slli with funct7 = 0x20
+            x"0420D093",  -- srli with funct7 = 2
+            x"00000000",  -- all zero
+            x"FFFFFFFF",  -- all ones
+            x"0000002B",  -- custom opcode
+            x"00000057"); -- vector opcode
 
-        impure function rnd(n : integer) return integer is
-            variable y : real;
+        impure function r_reg return natural is
         begin
-            uniform(s1, s2, y);
-            return integer(floor(y * real(n)));
+            return rnd.int_skewed(0, N_REG);
         end function;
-    begin
-        -- prologue: put some random values into x1..x7
-        for r in 1 to 7 loop
-            p(r - 1) := enc_i(rnd(4096) - 2048, 0, 0, r);
-        end loop;
-        -- x8 = BASE: base register for jalr (random ops only touch x0..x7, so x8 stays BASE)
-        p(7) := enc_u(BASE / 4096, 8, "0110111");
 
-        for n in 8 to ROM_SIZE - 20 loop
-            kind := rnd(16);
-            if kind = 14 then     -- lui
-                p(n) := enc_u(rnd(1048576), rnd(8), "0110111");
-            elsif kind = 15 then  -- auipc
-                p(n) := enc_u(rnd(1048576), rnd(8), "0010111");
-            elsif kind < 5 then   -- R-type
-                sel := rnd(10);
-                p(n) := enc_r(R_OPS(sel)(1), rnd(8), rnd(8), R_OPS(sel)(0), rnd(8));
-            elsif kind < 9 then   -- I-type
-                sel := rnd(8);
-                f3 := I_F3(sel);
-                if f3 = 1 then
-                    p(n) := enc_i(rnd(32), rnd(8), 1, rnd(8));              -- slli
-                elsif f3 = 5 and sel = 5 then
-                    p(n) := enc_i(rnd(32), rnd(8), 5, rnd(8));              -- srli
-                elsif f3 = 5 then
-                    p(n) := enc_i(1024 + rnd(32), rnd(8), 5, rnd(8));       -- srai
-                else
-                    p(n) := enc_i(rnd(4096) - 2048, rnd(8), f3, rnd(8));
-                end if;
-            elsif kind < 10 then  -- store sb / sh / sw
-                p(n) := enc_s(rnd(4096) - 2048, rnd(8), rnd(8), rnd(3));
-            elsif kind < 11 then  -- load lb lh lw lbu lhu, aligned address = imm (base x0)
-                sel := rnd(5);
-                lw := 0;
-                case sel is
-                    when 0 => f3 := 0;
-                    when 1 => f3 := 1; lw := 1;
-                    when 2 => f3 := 2; lw := 3;
-                    when 3 => f3 := 4;
-                    when others => f3 := 5; lw := 1;
+        procedure emit(w : word_t) is
+        begin
+            p(n) := w;
+            n := n + 1;
+        end procedure;
+    begin
+        rnd.seed(G_SEED);
+        -- prologue: x1..x15 random (lui + addi), x31 = BASE
+        for r in 1 to N_REG loop
+            emit(enc_u(rnd.int(0, 1048575), r, "0110111"));
+            emit(enc_i("0010011", rnd.int(-2048, 2047), r, 0, r));
+        end loop;
+        emit(enc_u(BASE / 4096, BASE_REG, "0110111"));
+
+        -- body
+        while n < ROM_SIZE - 40 loop
+            kind := rnd.int(0, 99);
+            if kind < 22 then                                    -- R-type
+                case rnd.int(0, 9) is
+                    when 0 => emit(enc_r(0, r_reg, r_reg, 0, r_reg));
+                    when 1 => emit(enc_r(32, r_reg, r_reg, 0, r_reg));
+                    when 2 => emit(enc_r(32, r_reg, r_reg, 5, r_reg));
+                    when others => emit(enc_r(0, r_reg, r_reg, rnd.int(1, 7), r_reg));
                 end case;
-                p(n) := enc_l(((rnd(4096) - 2048) / (lw + 1)) * (lw + 1), 0, f3, rnd(8));
-            elsif kind < 12 then  -- forward branch skipping 1 or 2 instructions
-                p(n) := enc_b(8 + 4 * rnd(2), rnd(8), rnd(8), rnd(2));      -- beq / bne
-            elsif kind < 13 or n > 500 then -- jal skipping 1 or 2 instructions, link into x0..x7
-                p(n) := enc_j(8 + 4 * rnd(2), rnd(8));
-            else                  -- jalr x8-based (x8 = BASE): odd imm exercises the bit-0 clear
-                p(n) := enc_jalr(4 * (n + 2 + rnd(2)) + 1, 8, rnd(8));
+            elsif kind < 40 then                                 -- I-type ALU
+                f3 := rnd.int(0, 7);
+                if f3 = 1 then
+                    emit(enc_i("0010011", rnd.int(0, 31), r_reg, 1, r_reg));            -- slli
+                elsif f3 = 5 then
+                    emit(enc_i("0010011", rnd.int(0, 31) + 1024 * rnd.int(0, 1), r_reg, 5, r_reg));  -- srli / srai
+                else
+                    emit(enc_i("0010011", rnd.int_skewed(-2048, 2047), r_reg, f3, r_reg));
+                end if;
+            elsif kind < 50 then                                 -- loads, any base, any alignment
+                case rnd.int(0, 4) is
+                    when 0 => f3 := 0;
+                    when 1 => f3 := 1;
+                    when 2 => f3 := 2;
+                    when 3 => f3 := 4;
+                    when others => f3 := 5;
+                end case;
+                emit(enc_i("0000011", rnd.int(-2048, 2047), r_reg, f3, r_reg));
+            elsif kind < 60 then                                 -- stores, any alignment
+                emit(enc_s(rnd.int(-2048, 2047), r_reg, r_reg, rnd.int(0, 2)));
+            elsif kind < 70 then                                 -- forward branches, all six
+                case rnd.int(0, 5) is
+                    when 0 => f3 := 0;
+                    when 1 => f3 := 1;
+                    when 2 => f3 := 4;
+                    when 3 => f3 := 5;
+                    when 4 => f3 := 6;
+                    when others => f3 := 7;
+                end case;
+                if rnd.bool(0.3) then
+                    emit(enc_b(4 * rnd.int(2, 3), rnd.int(0, N_REG), rnd.int(0, N_REG) mod 4, f3));   -- small regs: equal more often
+                else
+                    emit(enc_b(4 * rnd.int(2, 3), r_reg, r_reg, f3));
+                end if;
+            elsif kind < 74 then                                 -- jal forward
+                emit(enc_j(4 * rnd.int(1, 3), r_reg));
+            elsif kind < 78 and n < 480 then                     -- jalr x31 + odd imm -> bit 0 cleared
+                emit(enc_i("1100111", 4 * (n + 1 + rnd.int(1, 2)) + rnd.int(0, 1), BASE_REG, 0, r_reg));
+            elsif kind < 84 then                                 -- lui / auipc
+                if rnd.bool then
+                    emit(enc_u(rnd.int(0, 1048575), r_reg, "0110111"));
+                else
+                    emit(enc_u(rnd.int(0, 1048575), r_reg, "0010111"));
+                end if;
+            elsif kind < 94 then                                 -- csrrw / csrrs / csrrc
+                emit(enc_csr(CSRS(rnd.int(0, CSRS'length - 1)), r_reg, rnd.int(1, 3), r_reg));
+            else                                                 -- illegal: no-op
+                emit(ILLEGALS(rnd.int(0, ILLEGALS'length - 1)));
             end if;
         end loop;
-        p(ROM_SIZE - 1) := x"00000063"; -- beq x0,x0,0  : halt
+
+        -- epilogue: register dump through rez, then halt
+        for r in 1 to 31 loop
+            emit(enc_r(0, 0, r, 0, 0));                          -- add x0, xr, x0
+        end loop;
+        halt_pc <= BASE + 4 * n;
+        emit(HALT_W);
         rom <= p;
         wait;
-    end process;
+    end process gen;
 
-    ---------------------------------------------------------------- checker
+    ---------------------------------------------------------------- model + checker
     check : process
-        type reg_array is array (0 to 31) of std_logic_vector(31 downto 0);
+        type reg_array is array (0 to 31) of word_t;
         variable regs : reg_array := (others => (others => '0'));
-        variable pc_m : integer := BASE;
-        variable w    : std_logic_vector(31 downto 0);
-        variable a, b, exp_rez : std_logic_vector(31 downto 0);
-        variable rd, rs1, rs2 : integer;
-        variable f3 : std_logic_vector(2 downto 0);
-        variable alt, taken : boolean;
-        variable exp_we : std_logic_vector(3 downto 0);
-        variable width, off : integer;
-        variable stores, loads, jumps, uppers : integer := 0;
-        variable tgt : std_logic_vector(31 downto 0);
-        variable cycles, branches_taken, branches_not : integer := 0;
+        variable pc_m : natural := BASE;
+        variable s_mie, s_mpie, s_meie : std_logic := '0';
+        variable s_mtvec, s_mepc, s_mcause : word_t := (others => '0');
+
+        type count_t is record
+            r, i, ld, ld_mis, st, st_mis, br_t, br_n, jal, jalr, lui, auipc, csr, csr_ro, ill, x0_wr : natural;
+        end record;
+        variable cnt : count_t := (others => 0);
+        type br_array is array (0 to 7) of natural;
+        variable br_taken, br_not : br_array := (others => 0);
+        variable cycles : natural := 0;
+
+        impure function csr_read(num : std_logic_vector(11 downto 0)) return word_t is
+            variable v : word_t := (others => '0');
+        begin
+            case num is
+                when x"300" => v(3) := s_mie; v(7) := s_mpie;
+                when x"304" => v(11) := s_meie;
+                when x"305" => v := s_mtvec;
+                when x"341" => v := s_mepc;
+                when x"342" => v := s_mcause;
+                when others => null;                              -- mip = irq = 0, unknown = 0
+            end case;
+            return v;
+        end function;
+
+        procedure csr_write(num : std_logic_vector(11 downto 0); v : word_t) is
+        begin
+            case num is
+                when x"300" => s_mie := v(3); s_mpie := v(7);
+                when x"304" => s_meie := v(11);
+                when x"305" => s_mtvec := v;
+                when x"341" => s_mepc := v;
+                when x"342" => s_mcause := v;
+                when others => null;
+            end case;
+        end procedure;
+
+        function load_val(f3 : natural; addr : word_t) return word_t is
+            variable w    : word_t := mem_word(addr);
+            variable off  : natural := to_integer(unsigned(addr(1 downto 0)));
+            variable size : natural;
+            variable v    : word_t := (others => '0');
+        begin
+            case f3 is
+                when 0 | 4 => size := 1;
+                when 1 | 5 => size := 2;
+                when others => size := 4;
+            end case;
+            if off mod size /= 0 then
+                return x"00000000";
+            end if;
+            v(8 * size - 1 downto 0) := w(8 * (off + size) - 1 downto 8 * off);
+            if (f3 = 0 or f3 = 1) and v(8 * size - 1) = '1' then
+                v(31 downto 8 * size) := (others => '1');
+            end if;
+            return v;
+        end function;
+
+        -- model one instruction; checks DUT outputs of this cycle
+        procedure step(w : word_t; corrupt : boolean := false) is
+            variable op  : std_logic_vector(6 downto 0) := w(6 downto 0);
+            variable f3  : natural := to_integer(unsigned(w(14 downto 12)));
+            variable f7  : natural := to_integer(unsigned(w(31 downto 25)));
+            variable rd  : natural := to_integer(unsigned(w(11 downto 7)));
+            variable rs1 : natural := to_integer(unsigned(w(19 downto 15)));
+            variable rs2 : natural := to_integer(unsigned(w(24 downto 20)));
+            variable a   : word_t := regs(rs1);
+            variable b   : word_t := regs(rs2);
+            variable c   : ctl_t := ref_decode(w);   -- only used for "is it legal"
+            variable imm_i : word_t := std_logic_vector(resize(signed(w(31 downto 20)), 32));
+            variable imm_s : word_t := std_logic_vector(resize(signed(std_logic_vector'(w(31 downto 25) & w(11 downto 7))), 32));
+            variable imm_b : word_t := std_logic_vector(resize(signed(std_logic_vector'(w(31) & w(7) & w(30 downto 25) & w(11 downto 8) & '0')), 32));
+            variable imm_j : word_t := std_logic_vector(resize(signed(std_logic_vector'(w(31) & w(19 downto 12) & w(20) & w(30 downto 21) & '0')), 32));
+            variable imm_u : word_t := w(31 downto 12) & x"000";
+            variable pcv   : word_t := std_logic_vector(to_unsigned(pc_m, 32));
+            variable next_pc : natural := pc_m + 4;
+            variable exp_rez : word_t;
+            variable chk_rez : boolean := true;
+            variable wr_val  : word_t;
+            variable do_wr   : boolean := false;
+            variable exp_we  : std_logic_vector(3 downto 0) := "0000";
+            variable size, off : natural;
+            variable taken   : boolean;
+            variable old     : word_t;
+            variable exp_pc  : word_t := pcv;
+            variable tgt     : word_t;
+        begin
+            if corrupt then exp_pc := std_logic_vector(unsigned(pcv) + 4); end if;
+            tb_check_equal(PC, exp_pc, "PC");
+            tb_check_equal(Illegal, c.Illegal, "Illegal for " & to_str(w) & " at " & to_str(pcv));
+
+            if c.Illegal = '1' then
+                chk_rez := false;
+                cnt.ill := cnt.ill + 1;
+            elsif op = "0110011" then                                     -- R-type
+                exp_rez := ref_alu(a, b, alu_code(f3, f7 = 32));
+                wr_val := exp_rez; do_wr := true;
+                cnt.r := cnt.r + 1;
+            elsif op = "0010011" then                                     -- I-type ALU
+                exp_rez := ref_alu(a, imm_i, alu_code(f3, f3 = 5 and f7 = 32));
+                wr_val := exp_rez; do_wr := true;
+                cnt.i := cnt.i + 1;
+            elsif op = "0000011" then                                     -- load
+                exp_rez := std_logic_vector(unsigned(a) + unsigned(imm_i));
+                wr_val := load_val(f3, exp_rez); do_wr := true;
+                cnt.ld := cnt.ld + 1;
+                if (f3 = 1 or f3 = 5) and exp_rez(0) = '1' then cnt.ld_mis := cnt.ld_mis + 1; end if;
+                if f3 = 2 and exp_rez(1 downto 0) /= "00" then cnt.ld_mis := cnt.ld_mis + 1; end if;
+            elsif op = "0100011" then                                     -- store
+                exp_rez := std_logic_vector(unsigned(a) + unsigned(imm_s));
+                size := 2 ** f3;
+                off  := to_integer(unsigned(exp_rez(1 downto 0)));
+                if off mod size = 0 then
+                    for i in 0 to size - 1 loop
+                        exp_we(off + i) := '1';
+                    end loop;
+                else
+                    cnt.st_mis := cnt.st_mis + 1;
+                end if;
+                cnt.st := cnt.st + 1;
+            elsif op = "1100011" then                                     -- branch
+                case f3 is
+                    when 0 => taken := a = b;                          exp_rez := ref_alu(a, b, "1000");
+                    when 1 => taken := a /= b;                         exp_rez := ref_alu(a, b, "1000");
+                    when 4 => taken := signed(a) < signed(b);          exp_rez := ref_alu(a, b, "0010");
+                    when 5 => taken := signed(a) >= signed(b);         exp_rez := ref_alu(a, b, "0010");
+                    when 6 => taken := unsigned(a) < unsigned(b);      exp_rez := ref_alu(a, b, "0011");
+                    when others => taken := unsigned(a) >= unsigned(b); exp_rez := ref_alu(a, b, "0011");
+                end case;
+                if taken then
+                    next_pc := to_integer(unsigned(pcv) + unsigned(imm_b));
+                    br_taken(f3) := br_taken(f3) + 1;
+                    cnt.br_t := cnt.br_t + 1;
+                else
+                    br_not(f3) := br_not(f3) + 1;
+                    cnt.br_n := cnt.br_n + 1;
+                end if;
+            elsif op = "1101111" then                                     -- jal
+                chk_rez := false;
+                wr_val := std_logic_vector(to_unsigned(pc_m + 4, 32)); do_wr := true;
+                next_pc := to_integer(unsigned(pcv) + unsigned(imm_j));
+                cnt.jal := cnt.jal + 1;
+            elsif op = "1100111" then                                     -- jalr
+                chk_rez := false;
+                wr_val := std_logic_vector(to_unsigned(pc_m + 4, 32)); do_wr := true;
+                tgt := std_logic_vector(unsigned(a) + unsigned(imm_i));
+                tgt(0) := '0';
+                next_pc := to_integer(unsigned(tgt));
+                cnt.jalr := cnt.jalr + 1;
+            elsif op = "0110111" then                                     -- lui
+                exp_rez := imm_u;
+                wr_val := exp_rez; do_wr := true;
+                cnt.lui := cnt.lui + 1;
+            elsif op = "0010111" then                                     -- auipc
+                exp_rez := std_logic_vector(unsigned(pcv) + unsigned(imm_u));
+                wr_val := exp_rez; do_wr := true;
+                cnt.auipc := cnt.auipc + 1;
+            else                                                          -- csrrw / csrrs / csrrc
+                chk_rez := false;
+                old := csr_read(w(31 downto 20));
+                wr_val := old; do_wr := true;
+                case f3 is
+                    when 1 => csr_write(w(31 downto 20), a);
+                    when 2 => if rs1 /= 0 then csr_write(w(31 downto 20), old or a); else cnt.csr_ro := cnt.csr_ro + 1; end if;
+                    when others => if rs1 /= 0 then csr_write(w(31 downto 20), old and not a); else cnt.csr_ro := cnt.csr_ro + 1; end if;
+                end case;
+                cnt.csr := cnt.csr + 1;
+            end if;
+
+            if chk_rez then
+                tb_check_equal(rez, exp_rez, "rez for " & to_str(w) & " at " & to_str(pcv));
+            end if;
+            tb_check_equal(WE, exp_we, "WE for " & to_str(w) & " at " & to_str(pcv));
+            for lane in 0 to 3 loop
+                if exp_we(lane) = '1' then
+                    tb_check_equal(WD(8 * lane + 7 downto 8 * lane), b(8 * (lane - off) + 7 downto 8 * (lane - off)),
+                                   "WD lane " & integer'image(lane) & " for " & to_str(w) & " at " & to_str(pcv));
+                end if;
+            end loop;
+
+            if do_wr then
+                if rd = 0 then
+                    cnt.x0_wr := cnt.x0_wr + 1;
+                else
+                    regs(rd) := wr_val;
+                end if;
+            end if;
+            pc_m := next_pc;
+        end procedure;
     begin
-        wait for 1 ns;                 -- let gen process fill the rom
+        tb_info("core_tb seed=" & integer'image(G_SEED));
         wait until falling_edge(clk);
         wait until falling_edge(clk);
+        tb_check_equal(PC, x"00001000", "reset vector");
         rst <= '0';
 
-        while pc_m /= BASE + 4 * (ROM_SIZE - 1) loop
-            w   := rom((pc_m - BASE) / 4);
-            rd  := to_integer(unsigned(w(11 downto 7)));
-            rs1 := to_integer(unsigned(w(19 downto 15)));
-            rs2 := to_integer(unsigned(w(24 downto 20)));
-            f3  := w(14 downto 12);
-            a   := regs(rs1);
-
-            assert to_integer(unsigned(PC)) = pc_m
-                report "PC wrong at cycle " & integer'image(cycles) & ": got " & to_hstring(PC) &
-                       " expected " & integer'image(pc_m) severity failure;
-            assert Illegal = '0'
-                report "Illegal at PC " & integer'image(pc_m) & " instr " & to_hstring(w) severity failure;
-
-            if w(6 downto 0) = "0110011" then          -- R-type
-                alt := (w(30) = '1');
-                exp_rez := alu_model(f3, alt, a, regs(rs2));
-                if rd /= 0 then regs(rd) := exp_rez; end if;
-                pc_m := pc_m + 4;
-            elsif w(6 downto 0) = "0010011" then       -- I-type
-                b := (31 downto 12 => w(31)) & w(31 downto 20);
-                alt := (f3 = "101" and w(30) = '1');
-                exp_rez := alu_model(f3, alt, a, b);
-                if rd /= 0 then regs(rd) := exp_rez; end if;
-                pc_m := pc_m + 4;
-            elsif w(6 downto 0) = "0100011" then       -- store: ALU computes rs1 + imm_s, regs unchanged
-                b := (31 downto 12 => w(31)) & w(31 downto 25) & w(11 downto 7);
-                exp_rez := std_logic_vector(unsigned(a) + unsigned(b));
-                width := 2 ** to_integer(unsigned(f3));
-                off := to_integer(unsigned(exp_rez(1 downto 0)));
-                exp_we := (others => '0');
-                if off mod width = 0 then
-                    for i in 0 to width - 1 loop exp_we(off + i) := '1'; end loop;
-                end if;
-                assert WE = exp_we
-                    report "WE wrong at PC " & integer'image(pc_m) & ": got " & to_string(WE) &
-                           " expected " & to_string(exp_we) severity failure;
-                for i in 0 to 3 loop    -- every enabled lane must carry the right byte of rs2
-                    if exp_we(i) = '1' then
-                        assert WD(8 * i + 7 downto 8 * i) = regs(rs2)(8 * (i - off) + 7 downto 8 * (i - off))
-                            report "WD lane " & integer'image(i) & " wrong at PC " & integer'image(pc_m) severity failure;
-                    end if;
-                end loop;
-                stores := stores + 1;
-                pc_m := pc_m + 4;
-            elsif w(6 downto 0) = "0000011" then       -- load: rd = mem[rs1 + imm_i]
-                b := (31 downto 12 => w(31)) & w(31 downto 20);
-                exp_rez := std_logic_vector(unsigned(a) + unsigned(b));
-                if rd /= 0 then
-                    regs(rd) := load_model(f3, mem_word(exp_rez), to_integer(unsigned(exp_rez(1 downto 0))));
-                end if;
-                loads := loads + 1;
-                pc_m := pc_m + 4;
-            elsif w(6 downto 0) = "1101111" then       -- jal: rd = pc+4, pc += J-imm; ALU does rs1 + rs2
-                exp_rez := std_logic_vector(unsigned(a) + unsigned(regs(rs2)));
-                if rd /= 0 then regs(rd) := std_logic_vector(to_unsigned(pc_m + 4, 32)); end if;
-                b := (31 downto 20 => w(31)) & w(19 downto 12) & w(20) & w(30 downto 21) & '0';
-                pc_m := pc_m + to_integer(signed(b));
-                jumps := jumps + 1;
-            elsif w(6 downto 0) = "1100111" then       -- jalr: rd = pc+4, pc = (rs1 + I-imm) & ~1
-                exp_rez := std_logic_vector(unsigned(a) + unsigned(regs(rs2)));
-                b := (31 downto 12 => w(31)) & w(31 downto 20);
-                if rd /= 0 then regs(rd) := std_logic_vector(to_unsigned(pc_m + 4, 32)); end if;
-                tgt := std_logic_vector(unsigned(a) + unsigned(b));
-                pc_m := to_integer(unsigned(tgt(31 downto 1) & '0'));
-                jumps := jumps + 1;
-            elsif w(6 downto 0) = "0110111" then       -- lui: rd = imm << 12
-                exp_rez := w(31 downto 12) & x"000";
-                if rd /= 0 then regs(rd) := exp_rez; end if;
-                uppers := uppers + 1;
-                pc_m := pc_m + 4;
-            elsif w(6 downto 0) = "0010111" then       -- auipc: rd = pc + (imm << 12)
-                exp_rez := std_logic_vector(to_unsigned(pc_m, 32) + unsigned(std_logic_vector'(w(31 downto 12) & x"000")));
-                if rd /= 0 then regs(rd) := exp_rez; end if;
-                uppers := uppers + 1;
-                pc_m := pc_m + 4;
-            else                                       -- branch: ALU computes rs1 - rs2
-                exp_rez := std_logic_vector(unsigned(a) - unsigned(regs(rs2)));
-                taken := (exp_rez = x"00000000") = (f3 = "000");
-                if taken then
-                    b := (31 downto 13 => w(31)) & w(31) & w(7) & w(30 downto 25) & w(11 downto 8) & '0';
-                    pc_m := pc_m + to_integer(signed(b));
-                    branches_taken := branches_taken + 1;
-                else
-                    pc_m := pc_m + 4;
-                    branches_not := branches_not + 1;
-                end if;
-            end if;
-
-            if w(6 downto 0) /= "0100011" then
-                assert WE = "0000" report "WE must be 0 for non-store at PC " & integer'image(pc_m) severity failure;
-            end if;
-            assert rez = exp_rez
-                report "rez wrong at PC " & integer'image(to_integer(unsigned(PC))) & " instr " & to_hstring(w) &
-                       ": got " & to_hstring(rez) & " expected " & to_hstring(exp_rez) severity failure;
+        tb_set_verbose(false);
+        while pc_m /= halt_pc loop
+            step(rom((pc_m - BASE) / 4));
             cycles := cycles + 1;
-            wait until falling_edge(clk);   -- next cycle
-        end loop;
-
-        report "core_tb done: " & integer'image(cycles) & " cycles, branches taken " &
-               integer'image(branches_taken) & " / not taken " & integer'image(branches_not);
-        assert loads > 20 report "program has too few loads" severity error;
-        assert stores > 20 report "program has too few stores" severity error;
-        assert jumps > 20 report "program has too few jumps" severity error;
-        assert uppers > 20 report "program has too few lui/auipc" severity error;
-        assert branches_taken > 20 and branches_not > 20 report "program has too few branches" severity error;
-
-        -- halt loop must stay put
-        for i in 1 to 5 loop
+            exit when tb_error_count > 20;           -- the model has diverged: stop the flood
             wait until falling_edge(clk);
-            assert to_integer(unsigned(PC)) = BASE + 4 * (ROM_SIZE - 1) report "left the halt loop" severity error;
         end loop;
-        std.env.finish;
-    end process;
-end architecture;
+        tb_set_verbose(true);
+
+        tb_info(integer'image(cycles) & " instructions: R " & integer'image(cnt.r) & ", I " & integer'image(cnt.i) &
+                ", load " & integer'image(cnt.ld) & " (misaligned " & integer'image(cnt.ld_mis) & "), store " &
+                integer'image(cnt.st) & " (misaligned " & integer'image(cnt.st_mis) & "), branch taken/not " &
+                integer'image(cnt.br_t) & "/" & integer'image(cnt.br_n) & ", jal " & integer'image(cnt.jal) &
+                ", jalr " & integer'image(cnt.jalr) & ", lui/auipc " & integer'image(cnt.lui) & "/" &
+                integer'image(cnt.auipc) & ", csr " & integer'image(cnt.csr) & " (read-only " &
+                integer'image(cnt.csr_ro) & "), illegal " & integer'image(cnt.ill) & ", rd=x0 " & integer'image(cnt.x0_wr));
+        tb_check(cnt.r > 0 and cnt.i > 0 and cnt.ld_mis > 0 and cnt.st_mis > 0 and cnt.jal > 0 and cnt.jalr > 0 and
+                 cnt.lui > 0 and cnt.auipc > 0 and cnt.csr_ro > 0 and cnt.ill > 0 and cnt.x0_wr > 0,
+                 "coverage: an instruction class was never executed");
+        for f3 in 0 to 7 loop
+            if f3 /= 2 and f3 /= 3 then
+                tb_check(br_taken(f3) > 0 and br_not(f3) > 0,
+                         "coverage: branch funct3=" & integer'image(f3) & " taken " & integer'image(br_taken(f3)) &
+                         ", not taken " & integer'image(br_not(f3)));
+            end if;
+        end loop;
+
+        tb_info("halt loop must stay put");
+        for i in 1 to 3 loop
+            step(HALT_W);
+            wait until falling_edge(clk);
+        end loop;
+
+        if G_INJECT then
+            tb_expect_errors(1, "E1: wrong PC prediction must be caught");
+            step(HALT_W, corrupt => true);
+            tb_end_expect;
+        end if;
+
+        done <= true;
+        run  <= false;
+        tb_finish;
+        wait;
+    end process check;
+end architecture sim;
