@@ -16,6 +16,10 @@ entity ControlUnit is
         Mem_Write : out STD_LOGIC;
         Result_Src : out std_logic_vector(1 downto 0) := "01";
         alu_control : out std_logic_vector(3 downto 0);
+        rs1 : in STD_LOGIC_VECTOR(4 downto 0);
+        CSRwrite : out std_logic;
+        CSRop : out std_logic_vector(1 downto 0);
+        MRET : out std_logic;
         JalrReg : out std_logic;
         Jump : out std_logic
     );
@@ -23,14 +27,14 @@ end entity ControlUnit;
 
 
 architecture RTL of ControlUnit is
-    
 begin
-    asunit : process(opcode, funct3, funct7) is
+    asunit : process(opcode, funct3, funct7, rs1) is
     begin
         Illegal <= '0';
         RegWrite <= '0';
         JalrReg <= '0';
         ASrc <= (others => '0');
+        MRET <= '0';
         BSrc <= '0';
         Jump <= '0';
         Branch <= '0';
@@ -38,6 +42,8 @@ begin
         Mem_Write <= '0';
         Result_Src <= (others => '0');
         alu_control <= (others => '0');
+        CSRwrite <= '0';
+        CSRop <= (others => '0');
         if opcode = "0110011" then
             BSrc <= '0';
             if funct3 = "000" then
@@ -106,7 +112,6 @@ begin
             else
                 Illegal <= '1';
             end if;
-
         elsif opcode = "0010011" then
             BSrc <= '1';
             if funct3 = "000" then
@@ -205,6 +210,31 @@ begin
             else
                 ASrc <= "01";
             end if;
+        elsif opcode = "1110011" then
+            if funct3 = "000" and funct7 = "0011000" then
+                MRET <= '1';
+            else
+                RegWrite <= '1';
+                Result_Src <= "11";
+                if funct3 = "001" then
+                    CSRwrite <= '1';
+                    CSRop <= "01";
+                elsif funct3 = "010" then
+                    CSRop <= "10";
+                    if TO_INTEGER(UNSIGNED(rs1)) /= 0 then
+                        CSRwrite <= '1';
+                    end if;                    
+                elsif funct3 = "011" then
+                    if TO_INTEGER(UNSIGNED(rs1)) /= 0 then
+                        CSRwrite <= '1';
+                    end if;
+                    CSRop <= "11";
+                else
+                    RegWrite <= '0';
+                    Result_Src <= (others => '0');
+                    Illegal <= '1';
+                end if;
+            end if;            
         else
             Illegal <= '1';
         end if;

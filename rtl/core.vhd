@@ -6,6 +6,7 @@ entity core is
     port(
         rst : in std_logic;
         clk : in std_logic;
+        irq : in std_logic;
         instr : in std_logic_vector(31 downto 0);
         PC : out std_logic_vector(31 downto 0);
         Illegal : out std_logic;
@@ -23,12 +24,18 @@ architecture RTL of core is
     signal BSrc : std_logic := '0';
     signal ImmSrc : std_logic_vector(2 downto 0) := (others => '0');
     signal alu_control : std_logic_vector(3 downto 0);
-    signal PC_src : std_logic := '0';
+    signal PC_src : std_logic_vector(1 downto 0) := (others => '0');
     signal Result_Src : std_logic_vector(1 downto 0);
     signal WD_Temp : std_logic_vector(31 downto 0);
     signal temp_res: std_logic_vector(31 downto 0) := (others => '0');
     signal READDATA : std_logic_vector(31 downto 0);
     signal JalrReg : std_logic;
+    signal MIE : std_logic;
+    signal MEIE : std_logic;
+    signal TRAP : std_logic;
+    signal CSRop : std_logic_vector(1 downto 0);
+    signal CSRwrite : std_logic;
+    signal MRET : std_logic;
 begin
     DataPath_inst : entity work.DataPath
         port map(
@@ -47,7 +54,14 @@ begin
             ReadData    => ReadData,
             Result_Src  => Result_Src,
             WD          => WD_Temp,
-            JalrReg     => JalrReg
+            JalrReg     => JalrReg,
+            TRAP        => TRAP,
+            CSRwrite    => CSRwrite,
+            CSRop       => CSRop,
+            MIE         => MIE,
+            MEIE        => MEIE,
+            MRET        => MRET,
+            irq         => irq
         );
     controlblock_inst : entity work.controlblock
         port map(
@@ -62,7 +76,14 @@ begin
             PCsrc       => PC_src,
             Result_Src  => Result_Src,
             Mem_Write   => Mem_Write,
-            JalrReg     => JalrReg
+            JalrReg     => JalrReg,
+            irq         => irq,
+            MIE         => MIE,
+            MEIE        => MEIE,
+            TRAP        => TRAP,
+            CSRop       => CSRop,
+            CSWrite     => CSRwrite,
+            MRET        => MRET
         );
     WriteBlock_inst : entity work.WriteBlock
         port map(

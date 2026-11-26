@@ -5,7 +5,7 @@ entity DataPath is
     port(
         clk : in std_logic;
         rst : in std_logic;
-        PC_Src : in std_logic;
+        PC_Src : in std_logic_vector(1 downto 0);
         ImmSrc : in std_logic_vector(2 downto 0);
         instr : in std_logic_vector(31 downto 0);
         AluSrcB : in std_logic;
@@ -18,7 +18,14 @@ entity DataPath is
         ReadData : in std_logic_vector(31 downto 0);
         Result_Src : in std_logic_vector(1 downto 0);
         WD : out std_logic_vector(31 downto 0);
-        JalrReg : in std_logic
+        JalrReg : in std_logic;
+        TRAP : in std_logic;
+        CSRwrite : in std_logic;
+        CSRop : in std_logic_vector(1 downto 0);
+        MIE : out std_logic;
+        MEIE : out std_logic;
+        MRET : in std_logic;
+        irq : in std_logic
     );
 end entity DataPath;
 
@@ -36,6 +43,9 @@ architecture RTL of DataPath is
     signal PC_Next_R : std_logic_vector(31 downto 0) := (others => '0');
     signal PCtarget_IN : std_logic_vector(31 downto 0) := (others => '0');
     signal PC_NEXT_OFFSET_ZERO : std_logic_vector(31 downto 0);
+    signal mtvec_handler_addr : std_logic_vector(31 downto 0);
+    signal mepc_ret_addr : std_logic_vector(31 downto 0);
+    signal CSR_RES : std_logic_vector(31 downto 0);
     
 
 begin
@@ -76,6 +86,8 @@ begin
         port map(
             PCPlus4 => PC_NEXT_4,
             PCL     => PC_NEXT_OFFSET_ZERO,
+            mtvec_handler_addr => mtvec_handler_addr,
+            mepc_ret_addr => mepc_ret_addr,
             S       => PC_Src,
             PCOUT   => PC_Next_R
         );
@@ -90,6 +102,25 @@ begin
             write_en        => RegWrite,
             write_In        => Write_Input
         );
+    CSRblock_inst : entity work.CSRblock
+        port map(
+            clk                => clk,
+            rst                => rst,
+            w_DATA             => A_input,
+            mtvec_handler_addr => mtvec_handler_addr,
+            mepc_ret_addr_in   => PC_NOW,
+            mepc_ret_addr_out  => mepc_ret_addr,
+            TRAP               => TRAP,
+            CSRwrite           => CSRwrite,
+            CSROp              => CSROp,
+            CSRnum             => instr(31 downto 20),
+            irq                => irq,
+            MIE                => MIE,
+            MEIE               => MEIE,
+            MRET               => MRET,
+            CSR_RES            => CSR_RES
+        );
+    
     ImmGen_inst : entity work.ImmGen
         port map(
             imm     => instr,
@@ -125,6 +156,7 @@ begin
             ReadData   => ReadData,
             ALU_Res    => Alu_Result,
             PC_4       => PC_NEXT_4,
+            CSR_RES    => CSR_RES,
             Mux_Res    => Write_Input
         );
     WD <= B_input;

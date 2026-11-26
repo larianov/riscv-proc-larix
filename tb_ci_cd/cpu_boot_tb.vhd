@@ -35,7 +35,7 @@ begin
     clk <= not clk after 5 ns;
 
     dut : entity work.cpu
-        port map(clk => clk, rst => rst, Illegal => Illegal, RezOUT => rez);
+        port map(clk => clk, rst => rst, Illegal => Illegal, irq => '0', RezOUT => rez);
 
     -- shadow register file
     shadow : process(clk)

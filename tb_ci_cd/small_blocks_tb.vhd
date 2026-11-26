@@ -13,6 +13,8 @@ architecture sim of small_blocks_tb is
 
     signal a, b, plus4, target, mux_pc, mux_alu : std_logic_vector(31 downto 0) := (others => '0');
     signal sel : std_logic := '0';
+    signal psel : std_logic_vector(1 downto 0) := "00";
+    signal mtvec, mepc : std_logic_vector(31 downto 0) := (others => '0');
     signal asel : std_logic_vector(1 downto 0) := "00";
     signal mux_a : std_logic_vector(31 downto 0);
 begin
@@ -21,7 +23,8 @@ begin
     u_pc : entity work.pc port map(clk => clk, rst => rst, PCNext => pc_next, PC_REG => pc_reg);
     u_p4 : entity work.PCPlus4 port map(PC => a, PC_O => plus4);
     u_tg : entity work.PCTarget port map(PC => a, offset => b, PCOFFSET => target);
-    u_pm : entity work.Pc_mux port map(PCPlus4 => a, PCL => b, S => sel, PCOUT => mux_pc);
+    u_pm : entity work.Pc_mux port map(PCPlus4 => a, PCL => b, mtvec_handler_addr => mtvec,
+                                                mepc_ret_addr => mepc, S => psel, PCOUT => mux_pc);
     u_am : entity work.alu_mux port map(rd2 => a, imm => b, S => sel, muxout => mux_alu);
     u_sa : entity work.SrcAMux port map(SrcA => a, PC => b, S => asel, Y => mux_a);
 
@@ -58,9 +61,19 @@ begin
         -- muxes
         a <= x"AAAAAAAA"; b <= x"55555555";
         sel <= '0'; wait for 1 ns;
-        assert mux_pc = a and mux_alu = a report "mux S=0 must pick first input" severity error;
+        assert mux_alu = a report "alu_mux S=0 must pick first input" severity error;
         sel <= '1'; wait for 1 ns;
-        assert mux_pc = b and mux_alu = b report "mux S=1 must pick second input" severity error;
+        assert mux_alu = b report "alu_mux S=1 must pick second input" severity error;
+
+        mtvec <= x"00001100"; mepc <= x"8000001C";
+        psel <= "00"; wait for 1 ns;
+        assert mux_pc = a report "Pc_mux 00 must pick PCPlus4" severity error;
+        psel <= "01"; wait for 1 ns;
+        assert mux_pc = b report "Pc_mux 01 must pick PCL" severity error;
+        psel <= "10"; wait for 1 ns;
+        assert mux_pc = x"00001100" report "Pc_mux 10 must pick mtvec" severity error;
+        psel <= "11"; wait for 1 ns;
+        assert mux_pc = x"8000001C" report "Pc_mux 11 must pick mepc" severity error;
 
         -- SrcAMux: 00 -> rs1, 01 -> PC, 10 -> zero (for lui)
         asel <= "00"; wait for 1 ns;

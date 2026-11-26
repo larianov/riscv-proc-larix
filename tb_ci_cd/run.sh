@@ -5,7 +5,7 @@ cd "$(dirname "$0")" || exit 1
 W=$(mktemp -d)
 trap 'rm -rf "$W"' EXIT
 
-RTL="ControlUnit ImmGen PCPlus4 PCTarget MuxJalr ZeroGen Pc_mux alu alu_mux SrcAMux pc riscvregfile controlblock result_mux DataPath WriteBlock ReadBlock core unifiedmem bootrom MMIO interselmux ReadDatamux cpu"
+RTL="ControlUnit ImmGen PCPlus4 PCTarget MuxJalr ZeroGen Pc_mux alu alu_mux SrcAMux pc riscvregfile controlblock result_mux CSRblock DataPath WriteBlock ReadBlock core unifiedmem bootrom MMIO interselmux ReadDatamux cpu"
 for f in $RTL; do
     ghdl -a --std=08 --workdir="$W" ../rtl/$f.vhd 2>/dev/null || { echo "cannot compile rtl/$f.vhd"; exit 1; }
 done

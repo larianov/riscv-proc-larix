@@ -141,7 +141,7 @@ begin
 
     dut : entity work.core
         port map(rst => rst, clk => clk, instr => instr, PC => PC, Illegal => Illegal, rez => rez,
-                 OUT_OF_MEMORY_DATA => mem_rd, WD => WD, WE => WE);
+                 OUT_OF_MEMORY_DATA => mem_rd, WD => WD, WE => WE, irq => '0');
 
     ---------------------------------------------------------------- build the program
     gen : process

@@ -7,6 +7,7 @@ entity cpu is
         clk : in std_logic;
         rst : in std_logic;
         Illegal : out std_logic;
+        irq     : in std_logic;
         RezOUT : out std_logic_vector(31 downto 0)
     );
 end entity cpu;
@@ -54,8 +55,6 @@ begin
             RD        => MEMROM,
             instr_out => instr_boot
         );
-    
-
     core_inst : entity work.core
         port map(
             rst     => rst,
@@ -66,9 +65,9 @@ begin
             rez     => rez,
             OUT_OF_MEMORY_DATA => ReadData,
             WD      => WD,
-            WE      => WE    
+            WE      => WE,
+            irq     => irq
         );
-
     MMIO_inst : entity work.MMIO
         port map(
             MemWrite => WE,
@@ -82,7 +81,6 @@ begin
             RDsel    => RDsel,
             intersel => intersel
         );
-
     interselmux_inst : entity work.interselmux
         port map(
             instr_boot => instr_boot,
