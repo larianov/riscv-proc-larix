@@ -18,22 +18,22 @@ begin
         
     begin
         ReadData <= (others => '0');
-        if funct3 = "010" then
+        if funct3 = "010" then -- LW
             if addr_2_bits = "00" then
                 ReadData <= Memory_Data;
             end if;
-        elsif funct3 = "000" then
+        elsif funct3 = "000" then -- LB (sign-extend)
             temp_addr := TO_INTEGER(UNSIGNED(addr_2_bits));
             ReadData <= (23 downto 0 => Memory_Data(temp_addr*8+7)) & Memory_Data(temp_addr*8+7 downto temp_addr*8);
-        elsif funct3 = "100" then
+        elsif funct3 = "100" then -- LBU (zero-extend)
             temp_addr := TO_INTEGER(UNSIGNED(addr_2_bits));
             ReadData <= (23 downto 0 => '0') & Memory_Data(temp_addr*8+7 downto temp_addr*8);
-        elsif funct3 = "001" then
+        elsif funct3 = "001" then -- LH (sign-extend)
             if addr_2_bits = "00" or addr_2_bits = "10" then
                 temp_addr := TO_INTEGER(UNSIGNED(addr_2_bits));   
                 ReadData <= (15 downto 0 => Memory_Data(temp_addr*8+15)) & Memory_Data((temp_addr+1)*8+7 downto (temp_addr+1)*8) &  Memory_Data((temp_addr)*8+7 downto (temp_addr)*8);                
             end if;         
-        elsif funct3 = "101" then
+        elsif funct3 = "101" then -- LHU (zero-extend)
             if addr_2_bits = "00" or addr_2_bits = "10" then
                 temp_addr := TO_INTEGER(UNSIGNED(addr_2_bits));   
                 ReadData <= (15 downto 0 => '0') & Memory_Data((temp_addr+1)*8+7 downto (temp_addr+1)*8) &  Memory_Data((temp_addr)*8+7 downto (temp_addr)*8);                

@@ -162,7 +162,7 @@ body.bare aside,body.bare header,body.bare #zoom{display:none}
 </main>
 
 <!-- ================================================================ MODEL
-  Source of truth for the drawing. tb_ci_cd/check_docs.js checks it against rtl/*.vhd:
+  Source of truth for the drawing. tb_ci_cd/check_docs.js checks it against rtl/**/*.vhd:
   entity ports, every drawn wire = a real RTL net, every RTL connection drawn.
   Pins: per side, "name" (spread evenly) or "name@offset". Wire paths: start pin or "@x,y" junction,
   then "x:N" / "y:N" moves, then the end pin ("#text" = label at the end). -->
@@ -171,49 +171,49 @@ body.bare aside,body.bare header,body.bare #zoom{display:none}
 "entities": {
   "cpu": {"file":"rtl/cpu.vhd","ports":[["clk","in",1],["rst","in",1],["Illegal","out",1],["irq","in",1],["RezOUT","out",32]],
     "desc":"Top level: the core, the boot ROM, the unified RAM, the MMIO address decoder and the two muxes that pick where instructions and load data come from.","tests":["cpu_boot_tb","tb_uni/cpu_fib_tb"]},
-  "core": {"file":"rtl/core.vhd","ports":[["rst","in",1],["clk","in",1],["irq","in",1],["instr","in",32],["PC","out",32],["Illegal","out",1],["rez","out",32],["OUT_OF_MEMORY_DATA","in",32],["WD","out",32],["WE","out",4]],
+  "core": {"file":"rtl/core/core.vhd","ports":[["rst","in",1],["clk","in",1],["irq","in",1],["instr","in",32],["PC","out",32],["Illegal","out",1],["rez","out",32],["OUT_OF_MEMORY_DATA","in",32],["WD","out",32],["WE","out",4]],
     "desc":"The single-cycle core: <b>DataPath</b> + <b>controlblock</b> + <b>WriteBlock</b> / <b>ReadBlock</b>. Fetch goes out on <code>PC</code> / <code>instr</code>, data on <code>rez</code> (address), <code>WD</code>, <code>WE[3:0]</code> and <code>OUT_OF_MEMORY_DATA</code>. Double-click to open.","tests":["core_tb","core_irq_tb"],"drill":"core","deps":{"*":[]}},
-  "DataPath": {"file":"rtl/DataPath.vhd","ports":[["clk","in",1],["rst","in",1],["PC_Src","in",2],["ImmSrc","in",3],["instr","in",32],["AluSrcB","in",1],["AluSRCA","in",2],["alu_control","in",4],["RegWrite","in",1],["Zero","out",1],["REZ","out",32],["PC","out",32],["ReadData","in",32],["Result_Src","in",2],["WD","out",32],["JalrReg","in",1],["TRAP","in",1],["CSRwrite","in",1],["CSRop","in",2],["MIE","out",1],["MEIE","out",1],["MRET","in",1],["irq","in",1]],
+  "DataPath": {"file":"rtl/core/datapath/DataPath.vhd","ports":[["clk","in",1],["rst","in",1],["PC_Src","in",2],["ImmSrc","in",3],["instr","in",32],["AluSrcB","in",1],["AluSRCA","in",2],["alu_control","in",4],["RegWrite","in",1],["Zero","out",1],["REZ","out",32],["PC","out",32],["ReadData","in",32],["Result_Src","in",2],["WD","out",32],["JalrReg","in",1],["TRAP","in",1],["CSRwrite","in",1],["CSRop","in",2],["MIE","out",1],["MEIE","out",1],["MRET","in",1],["irq","in",1]],
     "desc":"All 32-bit datapath blocks (blue tint in the core view). <code>WD</code> = RD2, <code>REZ</code> = ALU result, <code>PC</code> = PC register.","tests":["datapath_tb"]},
-  "controlblock": {"file":"rtl/controlblock.vhd","ports":[["instr","in",32],["zero","in",1],["Illegal","out",1],["RegWrite","out",1],["ASrc","out",2],["BSrc","out",1],["ImmSrc","out",3],["alu_control","out",4],["PCsrc","out",2],["Result_Src","out",2],["Mem_Write","out",1],["irq","in",1],["MIE","in",1],["MEIE","in",1],["TRAP","out",1],["CSRop","out",2],["CSWrite","out",1],["MRET","out",1],["JalrReg","out",1]],
+  "controlblock": {"file":"rtl/core/control/controlblock.vhd","ports":[["instr","in",32],["zero","in",1],["Illegal","out",1],["RegWrite","out",1],["ASrc","out",2],["BSrc","out",1],["ImmSrc","out",3],["alu_control","out",4],["PCsrc","out",2],["Result_Src","out",2],["Mem_Write","out",1],["irq","in",1],["MIE","in",1],["MEIE","in",1],["TRAP","out",1],["CSRop","out",2],["CSWrite","out",1],["MRET","out",1],["JalrReg","out",1]],
     "desc":"ControlUnit plus the logic around it (violet tint): the interrupt gate <code>TRAP = irq·MIE·MEIE</code>, the two gates that cancel RegWrite / MemWrite on a trap, and the PCSrc priority logic.","tests":["controlblock_tb"]},
-  "ControlUnit": {"file":"rtl/ControlUnit.vhd","ports":[["opcode","in",7],["funct3","in",3],["funct7","in",7],["RegWrite","out",1],["ASrc","out",2],["BSrc","out",1],["Illegal","out",1],["Branch","out",1],["ImmSrc","out",3],["Mem_Write","out",1],["Result_Src","out",2],["alu_control","out",4],["rs1","in",5],["CSRwrite","out",1],["CSRop","out",2],["MRET","out",1],["JalrReg","out",1],["Jump","out",1]],
+  "ControlUnit": {"file":"rtl/core/control/ControlUnit.vhd","ports":[["opcode","in",7],["funct3","in",3],["funct7","in",7],["RegWrite","out",1],["ASrc","out",2],["BSrc","out",1],["Illegal","out",1],["Branch","out",1],["ImmSrc","out",3],["Mem_Write","out",1],["Result_Src","out",2],["alu_control","out",4],["rs1","in",5],["CSRwrite","out",1],["CSRop","out",2],["MRET","out",1],["JalrReg","out",1],["Jump","out",1]],
     "desc":"Combinational decoder. Every output is 0 unless the instruction needs it; an unsupported instruction raises only <code>Illegal</code> and so runs as a no-op. <code>rs1</code> is only used to suppress the CSR write of <code>csrrs</code>/<code>csrrc</code> with <code>rs1 = x0</code>. Type an instruction in the left panel to see its outputs.","tests":["controlunit_tb (all 131 072 opcode/funct3/funct7 combinations)"],
     "enc":[["ImmSrc","000 I, 001 S, 010 B, 011 J, 100 U"],["ASrc","00 RD1, 01 PC, 10 zero"],["BSrc","0 RD2, 1 ImmExt"],["Result_Src","00 ALU, 01 load, 10 PC+4, 11 CSR"],["CSRop","01 write, 10 set, 11 clear"],["alu_control","see alu"]]},
-  "WriteBlock": {"file":"rtl/WriteBlock.vhd","ports":[["rd2","in",32],["addr_2_bits","in",2],["Mem_Write","in",1],["funct3","in",3],["WE","out",4],["wD","out",32]],
+  "WriteBlock": {"file":"rtl/core/WriteBlock.vhd","ports":[["rd2","in",32],["addr_2_bits","in",2],["Mem_Write","in",1],["funct3","in",3],["WE","out",4],["wD","out",32]],
     "desc":"Store formatting. Byte enables from funct3 and the two low address bits; the byte / half-word of rs2 is copied into every lane of <code>wD</code> so the enabled lane gets it. Misaligned <code>sh</code>/<code>sw</code> → <code>WE = 0000</code> (nothing is written).","tests":["writeblock_tb"],
     "enc":[["sw @00","WE 1111"],["sh @00 / @10","0011 / 1100"],["sb @00..@11","0001, 0010, 0100, 1000"]],
     "deps":{"WE":["Mem_Write","addr_2_bits","funct3"],"wD":["rd2","funct3"]}},
-  "ReadBlock": {"file":"rtl/ReadBlock.vhd","ports":[["Memory_Data","in",32],["addr_2_bits","in",2],["funct3","in",3],["ReadData","out",32]],
+  "ReadBlock": {"file":"rtl/core/ReadBlock.vhd","ports":[["Memory_Data","in",32],["addr_2_bits","in",2],["funct3","in",3],["ReadData","out",32]],
     "desc":"Load formatting: takes the byte / half / word at the low address bits out of the 32-bit memory word and sign- or zero-extends it by funct3. Misaligned <code>lh</code>/<code>lhu</code>/<code>lw</code> → 0.","tests":["readblock_tb"],
     "enc":[["lb / lbu","byte, sign / zero extended"],["lh / lhu","half at @00 or @10"],["lw","word at @00"]]},
-  "pc": {"file":"rtl/pc.vhd","ports":[["clk","in",1],["rst","in",1],["PCNext","in",32],["PC_REG","out",32]],
+  "pc": {"file":"rtl/core/datapath/pc.vhd","ports":[["clk","in",1],["rst","in",1],["PCNext","in",32],["PC_REG","out",32]],
     "desc":"The PC register. Loads <code>PCNext</code> on every rising edge; synchronous reset to <code>0x0000_1000</code>, the start of the boot ROM.","tests":["small_blocks_tb"],"deps":{"PC_REG":[]}},
-  "PCPlus4": {"file":"rtl/PCPlus4.vhd","ports":[["PC","in",32],["PC_O","out",32]],"desc":"PC + 4.","tests":["small_blocks_tb"]},
-  "MuxJalr": {"file":"rtl/MuxJalr.vhd","ports":[["PC_NOW","in",32],["RD1","in",32],["JalrReg","in",1],["PCtarget_IN","out",32]],
+  "PCPlus4": {"file":"rtl/core/datapath/PCPlus4.vhd","ports":[["PC","in",32],["PC_O","out",32]],"desc":"PC + 4.","tests":["small_blocks_tb"]},
+  "MuxJalr": {"file":"rtl/core/datapath/MuxJalr.vhd","ports":[["PC_NOW","in",32],["RD1","in",32],["JalrReg","in",1],["PCtarget_IN","out",32]],
     "desc":"Base for the jump target: PC for branches and <code>jal</code>, rs1 for <code>jalr</code>.","tests":["small_blocks_tb","datapath_tb","core_tb"],"enc":[["JalrReg = 0","PC"],["JalrReg = 1","RD1 (rs1)"]]},
-  "PCTarget": {"file":"rtl/PCTarget.vhd","ports":[["PC","in",32],["offset","in",32],["PCOFFSET","out",32]],"desc":"Jump / branch target = base + ImmExt.","tests":["small_blocks_tb"]},
-  "ZeroGen": {"file":"rtl/ZeroGen.vhd","ports":[["INP","in",32],["OUTP","out",32]],"desc":"Clears bit 0 of the target. Required by <code>jalr</code>; branch and <code>jal</code> targets are even anyway.","tests":["small_blocks_tb","datapath_tb"]},
-  "Pc_mux": {"file":"rtl/Pc_mux.vhd","ports":[["PCPlus4","in",32],["PCL","in",32],["mtvec_handler_addr","in",32],["mepc_ret_addr","in",32],["S","in",2],["PCOUT","out",32]],
+  "PCTarget": {"file":"rtl/core/datapath/PCTarget.vhd","ports":[["PC","in",32],["offset","in",32],["PCOFFSET","out",32]],"desc":"Jump / branch target = base + ImmExt.","tests":["small_blocks_tb"]},
+  "ZeroGen": {"file":"rtl/core/datapath/ZeroGen.vhd","ports":[["INP","in",32],["OUTP","out",32]],"desc":"Clears bit 0 of the target. Required by <code>jalr</code>; branch and <code>jal</code> targets are even anyway.","tests":["small_blocks_tb","datapath_tb"]},
+  "Pc_mux": {"file":"rtl/core/datapath/Pc_mux.vhd","ports":[["PCPlus4","in",32],["PCL","in",32],["mtvec_handler_addr","in",32],["mepc_ret_addr","in",32],["S","in",2],["PCOUT","out",32]],
     "desc":"Next PC.","tests":["small_blocks_tb"],"enc":[["00","PC + 4"],["01","branch / jump target"],["10","mtvec (interrupt)"],["11","mepc (mret)"]]},
-  "riscvregfile": {"file":"rtl/riscvregfile.vhd","ports":[["clk","in",1],["read_idx_second","in",5],["read_idx_first","in",5],["write_idx","in",5],["read_out_first","out",32],["read_out_second","out",32],["write_en","in",1],["write_In","in",32]],
+  "riscvregfile": {"file":"rtl/core/datapath/riscvregfile.vhd","ports":[["clk","in",1],["read_idx_second","in",5],["read_idx_first","in",5],["write_idx","in",5],["read_out_first","out",32],["read_out_second","out",32],["write_en","in",1],["write_In","in",32]],
     "desc":"32 × 32-bit registers. Two asynchronous read ports (rs1, rs2), one write port on the rising edge. Writes to <code>x0</code> are ignored, so it always reads 0.","tests":["riscvregfile_tb"],
     "deps":{"read_out_first":["read_idx_first"],"read_out_second":["read_idx_second"]}},
-  "ImmGen": {"file":"rtl/ImmGen.vhd","ports":[["imm","in",32],["imm_src","in",3],["imm_out","out",32]],
+  "ImmGen": {"file":"rtl/core/datapath/ImmGen.vhd","ports":[["imm","in",32],["imm_src","in",3],["imm_out","out",32]],
     "desc":"Builds the sign-extended immediate from the instruction bits.","tests":["immgen_tb"],"enc":[["000","I: instr[31:20]"],["001","S: instr[31:25], [11:7]"],["010","B: branch offset, bit 0 = 0"],["011","J: jal offset, bit 0 = 0"],["100","U: instr[31:12] << 12"]]},
-  "SrcAMux": {"file":"rtl/SrcAMux.vhd","ports":[["SrcA","in",32],["PC","in",32],["S","in",2],["Y","out",32]],
+  "SrcAMux": {"file":"rtl/core/datapath/SrcAMux.vhd","ports":[["SrcA","in",32],["PC","in",32],["S","in",2],["Y","out",32]],
     "desc":"ALU input A.","tests":["small_blocks_tb"],"enc":[["00","RD1 (rs1)"],["01","PC (auipc)"],["10","0 (lui)"]]},
-  "alu_mux": {"file":"rtl/alu_mux.vhd","ports":[["rd2","in",32],["imm","in",32],["S","in",1],["muxout","out",32]],
+  "alu_mux": {"file":"rtl/core/datapath/alu_mux.vhd","ports":[["rd2","in",32],["imm","in",32],["S","in",1],["muxout","out",32]],
     "desc":"ALU input B.","tests":["small_blocks_tb"],"enc":[["0","RD2 (rs2)"],["1","ImmExt"]]},
-  "alu": {"file":"rtl/alu.vhd","ports":[["A_input","in",32],["B_input","in",32],["alu_control","in",4],["res_out","out",32],["Z","out",1]],
+  "alu": {"file":"rtl/core/datapath/alu.vhd","ports":[["A_input","in",32],["B_input","in",32],["alu_control","in",4],["res_out","out",32],["Z","out",1]],
     "desc":"32-bit ALU. <code>Z</code> = 1 when the result is 0; the branch decision uses it (sub for beq/bne, slt/sltu for the rest). Shift amount = B[4:0].","tests":["alu_tb"],
     "enc":[["0000","add"],["1000","sub"],["0001","sll"],["0010","slt (signed)"],["0011","sltu"],["0100","xor"],["0101","srl"],["1101","sra"],["0110","or"],["0111","and"]]},
-  "CSRblock": {"file":"rtl/CSRblock.vhd","ports":[["clk","in",1],["rst","in",1],["w_DATA","in",32],["mtvec_handler_addr","out",32],["mepc_ret_addr_in","in",32],["mepc_ret_addr_out","out",32],["TRAP","in",1],["CSRwrite","in",1],["CSROp","in",2],["CSRnum","in",12],["irq","in",1],["MIE","out",1],["MEIE","out",1],["MRET","in",1],["CSR_RES","out",32]],
+  "CSRblock": {"file":"rtl/core/datapath/CSRblock.vhd","ports":[["clk","in",1],["rst","in",1],["w_DATA","in",32],["mtvec_handler_addr","out",32],["mepc_ret_addr_in","in",32],["mepc_ret_addr_out","out",32],["TRAP","in",1],["CSRwrite","in",1],["CSROp","in",2],["CSRnum","in",12],["irq","in",1],["MIE","out",1],["MEIE","out",1],["MRET","in",1],["CSR_RES","out",32]],
     "desc":"Machine-mode CSRs. <code>CSR_RES</code> is the old value of CSR <code>instr[31:20]</code> (goes to rd). On the clock edge, in priority order: <b>TRAP</b>: mepc ← PC, mcause ← 0x8000_000B, MPIE ← MIE, MIE ← 0. <b>MRET</b>: MIE ← MPIE, MPIE ← 1. <b>CSRwrite</b>: CSR ← rs1 / old | rs1 / old & ~rs1. Unknown CSRs read 0. Everything resets to 0.",
     "tests":["csrblock_tb","core_irq_tb"],
     "enc":[["0x300 mstatus","bit 3 MIE, bit 7 MPIE"],["0x304 mie","bit 11 MEIE"],["0x305 mtvec","handler address"],["0x341 mepc","return address"],["0x342 mcause","0x8000_000B after a trap"],["0x344 mip","bit 11 = irq (read only)"]],
     "deps":{"CSR_RES":["CSRnum"],"mtvec_handler_addr":[],"mepc_ret_addr_out":[],"MIE":[],"MEIE":[]}},
-  "result_mux": {"file":"rtl/result_mux.vhd","ports":[["Result_Src","in",2],["ReadData","in",32],["ALU_Res","in",32],["PC_4","in",32],["CSR_RES","in",32],["Mux_Res","out",32]],
+  "result_mux": {"file":"rtl/core/datapath/result_mux.vhd","ports":[["Result_Src","in",2],["ReadData","in",32],["ALU_Res","in",32],["PC_4","in",32],["CSR_RES","in",32],["Mux_Res","out",32]],
     "desc":"What is written to rd.","tests":["small_blocks_tb","datapath_tb"],"enc":[["00","ALU result"],["01","load data"],["10","PC + 4 (jal / jalr)"],["11","old CSR value"]]},
   "bootrom": {"file":"rtl/bootrom.vhd","ports":[["PC","in",32],["address","in",32],["RD","out",32],["instr_out","out",32]],
     "desc":"64-word ROM loaded from <code>boot.hex</code>: <code>lui x5, 0x80000</code> ; <code>jalr x0, 0(x5)</code>, i.e. jump to RAM. Two asynchronous read ports (instruction by PC, data by address); index = address / 4 mod 64.","tests":["bootrom_tb"],
@@ -450,7 +450,7 @@ body.bare aside,body.bare header,body.bare #zoom{display:none}
 </script>
 
 <!-- ================================================================ DECODER
-  JS copy of rtl/ControlUnit.vhd (+ the controlblock logic). tb_ci_cd/check_docs.js runs controlUnit()
+  JS copy of rtl/core/control/ControlUnit.vhd (+ the controlblock logic). tb_ci_cd/check_docs.js runs controlUnit()
   against a GHDL dump of ControlUnit for every opcode/funct3/funct7(/rs1) and must match bit for bit. -->
 <script id="decoder">
 (function () {

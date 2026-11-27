@@ -21,22 +21,22 @@ begin
         if Mem_Write = '0' then
             WE <= (others => '0');
         else
-            if addr_2_bits = "00" and funct3 = "010" then 
+            if addr_2_bits = "00" and funct3 = "010" then -- SW 
                 WE <= "1111";
-            elsif addr_2_bits = "10" and funct3 = "001" then
+            elsif addr_2_bits = "10" and funct3 = "001" then -- SH 
                 WE <= "1100";
-            elsif addr_2_bits = "00" and funct3 = "001" then
+            elsif addr_2_bits = "00" and funct3 = "001" then -- SH 
                 WE <= "0011";
-            elsif addr_2_bits = "11" and funct3 = "000" then
+            elsif addr_2_bits = "11" and funct3 = "000" then -- SB 
                 WE <= "1000";
-            elsif addr_2_bits = "10" and funct3 = "000" then
+            elsif addr_2_bits = "10" and funct3 = "000" then -- SB 
                 WE <= "0100";
-            elsif addr_2_bits = "01" and funct3 = "000" then
+            elsif addr_2_bits = "01" and funct3 = "000" then -- SB 
                 WE <= "0010";
-            elsif addr_2_bits = "00" and funct3 = "000" then
+            elsif addr_2_bits = "00" and funct3 = "000" then -- SB 
                 WE <= "0001";
             else
-                WE <= "0000";
+                WE <= "0000"; 
             end if;
         end if;
     end process;

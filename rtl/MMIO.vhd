@@ -20,16 +20,18 @@ end entity MMIO;
 
 architecture RTL of MMIO is
 begin
+    -- selects which memory the instruction is fetched from
     process(PC)
         begin
             if PC >= x"8000_0000" then
-                intersel <= "01";
+                intersel <= "01"; -- RAM
             elsif PC >= x"0000_1000" and PC <= x"0000_1FFF" then
-                intersel <= "00";
+                intersel <= "00"; -- ROM
             else
-                intersel <= "10";
+                intersel <= "10"; -- invalid
             end if;
         end process;
+    -- address decoder for loads/stores: routes write enables and read mux
     process(MemWrite, address)
         begin
         RDsel <= "101";

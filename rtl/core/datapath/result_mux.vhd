@@ -16,9 +16,9 @@ end entity result_mux;
 
 architecture RTL of result_mux is
 begin
-    Mux_Res <= ALU_Res when Result_Src = "00" else
-               ReadData when Result_Src = "01" else
-               PC_4 when Result_Src = "10" else
-               CSR_RES when Result_Src = "11" else
+    Mux_Res <= ALU_Res when Result_Src = "00" else 
+               ReadData when Result_Src = "01" else 
+               PC_4 when Result_Src = "10" else 
+               CSR_RES when Result_Src = "11" else 
                (others => '0');
 end architecture RTL;

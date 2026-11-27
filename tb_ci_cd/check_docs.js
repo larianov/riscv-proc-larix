@@ -82,7 +82,10 @@ function rhsIdents(rhs) {
 
 function loadRtl(dir) {
     const ents = {};
-    for (const f of fs.readdirSync(dir)) {
+    // rtl/ has subfolders (core/, core/datapath/, core/control/): walk them all
+    const walk = d => fs.readdirSync(path.join(dir, d), { withFileTypes: true })
+        .flatMap(x => x.isDirectory() ? walk(path.posix.join(d, x.name)) : [path.posix.join(d, x.name)]);
+    for (const f of walk('')) {
         if (!f.endsWith('.vhd')) continue;
         const src = stripComments(fs.readFileSync(path.join(dir, f), 'utf8'));
         const e = parseEntity(src);
@@ -100,7 +103,7 @@ function UF() { const p = {}; const find = k => { if (p[k] === undefined) p[k] =
 function checkEntities(model, rtl, err) {
     for (const [name, e] of Object.entries(model.entities)) {
         const r = rtl[name.toLowerCase()];
-        if (!r) { err(`entity ${name}: no rtl/*.vhd defines it`); continue; }
+        if (!r) { err(`entity ${name}: no rtl/**/*.vhd defines it`); continue; }
         if (e.file !== 'rtl/' + r.file) err(`entity ${name}: model says ${e.file}, RTL is rtl/${r.file}`);
         const mp = {}; for (const [n, dir, w] of e.ports) mp[n.toLowerCase()] = { n, dir, w };
         const rp = {}; for (const p of r.ports) rp[p.name.toLowerCase()] = p;

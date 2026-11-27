@@ -36,7 +36,7 @@ clone (`xdg-open docs/cpu.html`); GitHub shows only its source.
 
 The drawing is data (the JSON model at the top of `cpu.html`), and `tb_ci_cd/check_docs.sh` checks it against
 the RTL in CI:
-- every entity has exactly the ports of its `rtl/*.vhd` (name, direction, width),
+- every entity has exactly the ports of its `rtl/**/*.vhd` (name, direction, width),
 - every drawn wire connects pins that are on one RTL net, and every connection in the RTL is drawn (the RTL is
   flattened through `DataPath` / `controlblock`; the logic assignments in `controlblock.vhd` are drawn as the
   gate blocks),
@@ -49,7 +49,10 @@ model). Preview images: `chromium --headless --screenshot --window-size=2700,178
 
 | Folder       | Content |
 |--------------|---------|
-| `rtl/`       | CPU source (`.vhd`), one entity per file |
+| `rtl/`       | CPU source (`.vhd`), one entity per file: `cpu.vhd` + memory/MMIO at the top |
+| `rtl/core/`  | `core.vhd`, ReadBlock, WriteBlock |
+| `rtl/core/datapath/` | DataPath and its blocks (ALU, regfile, ImmGen, CSR, PC, muxes) |
+| `rtl/core/control/`  | controlblock, ControlUnit (instruction decoder) |
 | `tb_ci_cd/`  | Automatic tests, one per block, run by CI |
 | `tb_uni/`    | Testbenches for the university task (fibonacci program in `hex.hex`) |
 | `docs/`      | Interactive schematic `cpu.html` + preview images |
@@ -244,7 +247,7 @@ SEEDS="1 2 3 4 5" ./tb_ci_cd/run.sh   # more seeds for the random tests (default
 
 Needs `ghdl`, and `node` for the docs check (skipped without it). What `run.sh` does:
 
-1. Analyzes `rtl/*.vhd` with `--std=93c`: the Quartus project has no `VHDL_INPUT_VERSION`, so Quartus compiles the
+1. Analyzes `rtl/**/*.vhd` with `--std=93c`: the Quartus project has no `VHDL_INPUT_VERSION`, so Quartus compiles the
    RTL as VHDL-93, and VHDL-2008-only code in `rtl/` must fail here, not in Quartus.
 2. Analyzes everything as VHDL-2008 (the testbenches need it) and runs every `tb_ci_cd/*_tb.vhd`, once per seed
    if the testbench has a `G_SEED` generic.
@@ -268,7 +271,7 @@ Fibonacci program on the whole CPU (the university task), expects fib(20) = 6765
 
 ```sh
 cd tb_uni
-for f in ControlUnit ImmGen PCPlus4 PCTarget MuxJalr ZeroGen Pc_mux alu alu_mux SrcAMux result_mux pc riscvregfile controlblock CSRblock DataPath WriteBlock ReadBlock core unifiedmem bootrom MMIO interselmux ReadDatamux cpu; do ghdl -a --std=08 ../rtl/$f.vhd; done
+for f in core/control/ControlUnit core/datapath/ImmGen core/datapath/PCPlus4 core/datapath/PCTarget core/datapath/MuxJalr core/datapath/ZeroGen core/datapath/Pc_mux core/datapath/alu core/datapath/alu_mux core/datapath/SrcAMux core/datapath/result_mux core/datapath/pc core/datapath/riscvregfile core/control/controlblock core/datapath/CSRblock core/datapath/DataPath core/WriteBlock core/ReadBlock core/core unifiedmem bootrom MMIO interselmux ReadDatamux cpu; do ghdl -a --std=08 ../rtl/$f.vhd; done
 ghdl -a --std=08 cpu_fib_tb.vhd && ghdl --elab-run --std=08 cpu_fib_tb --assert-level=error
 ```
 

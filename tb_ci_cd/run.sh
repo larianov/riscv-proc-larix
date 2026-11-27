@@ -24,7 +24,7 @@ WALL=${WALL:-300}
 TIMEOUT=""
 command -v timeout > /dev/null 2>&1 && TIMEOUT="timeout $WALL"
 
-RTL="ControlUnit ImmGen PCPlus4 PCTarget MuxJalr ZeroGen Pc_mux alu alu_mux SrcAMux pc riscvregfile controlblock result_mux CSRblock DataPath WriteBlock ReadBlock core unifiedmem bootrom MMIO interselmux ReadDatamux cpu"
+RTL="core/control/ControlUnit core/datapath/ImmGen core/datapath/PCPlus4 core/datapath/PCTarget core/datapath/MuxJalr core/datapath/ZeroGen core/datapath/Pc_mux core/datapath/alu core/datapath/alu_mux core/datapath/SrcAMux core/datapath/pc core/datapath/riscvregfile core/control/controlblock core/datapath/result_mux core/datapath/CSRblock core/datapath/DataPath core/WriteBlock core/ReadBlock core/core unifiedmem bootrom MMIO interselmux ReadDatamux cpu"
 
 # 1) the RTL must be valid VHDL-93 (std_logic_textio needs -fsynopsys in 93 mode)
 mkdir "$W/v93"

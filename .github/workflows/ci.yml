@@ -20,7 +20,7 @@ jobs:
       - name: Fibonacci program on full CPU (tb_uni)
         working-directory: tb_uni
         run: |
-          for f in ControlUnit ImmGen PCPlus4 PCTarget MuxJalr ZeroGen Pc_mux alu alu_mux SrcAMux result_mux pc riscvregfile controlblock CSRblock DataPath WriteBlock ReadBlock core unifiedmem bootrom MMIO interselmux ReadDatamux cpu; do
+          for f in core/control/ControlUnit core/datapath/ImmGen core/datapath/PCPlus4 core/datapath/PCTarget core/datapath/MuxJalr core/datapath/ZeroGen core/datapath/Pc_mux core/datapath/alu core/datapath/alu_mux core/datapath/SrcAMux core/datapath/result_mux core/datapath/pc core/datapath/riscvregfile core/control/controlblock core/datapath/CSRblock core/datapath/DataPath core/WriteBlock core/ReadBlock core/core unifiedmem bootrom MMIO interselmux ReadDatamux cpu; do
             ghdl -a --std=08 ../rtl/$f.vhd
           done
           ghdl -a --std=08 cpu_fib_tb.vhd

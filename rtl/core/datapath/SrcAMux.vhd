@@ -13,8 +13,8 @@ end entity SrcAMux;
 
 architecture RTL of SrcAMux is
 begin
-    Y <= SrcA when S = "00" else
-         PC when S = "01" else
-         (others => '0');
+    Y <= SrcA when S = "00" else -- rs1
+         PC when S = "01" else -- AUIPC
+         (others => '0'); -- LUI
 end architecture RTL;
 
