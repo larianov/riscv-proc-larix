@@ -6,8 +6,6 @@ entity controlblock is
     port(
         clk : in std_logic;
         rst : in std_logic;
-        clr : in std_logic;
-        en : in std_logic;
         instrD : in std_logic_vector(31 downto 0);
         zero : in STD_LOGIC;
         Illegal : out std_logic;
@@ -26,11 +24,14 @@ entity controlblock is
         CSRop : out STD_LOGIC_VECTOR(1 downto 0);
         CSWrite : out STD_LOGIC;
         MRET : out STD_LOGIC;
-        JalrReg : out std_logic
+        JalrReg : out std_logic;
+        FlushE : in std_logic
     );
 end entity controlblock;
 
 architecture RTL of controlblock is
+    signal clr :  std_logic := '0';
+    signal en : std_logic := '1';
     signal Branch : std_logic := '0';
     signal Jump : std_logic;
     signal TRAP_INS : std_logic := '0';
@@ -75,7 +76,7 @@ begin
         port map(
             clk => clk,
             rst => rst,
-            clr => clr,
+            clr => FlushE,
             en  => en,
             d(0)   => MemWrite_D,
             q(0)   => Mem_Write_E
@@ -107,7 +108,7 @@ begin
         port map(
             clk => clk,
             rst => rst,
-            clr => clr,
+            clr => FlushE,
             en  => en,
             d(0)   => branch,
             q(0)   => branchE
@@ -119,7 +120,7 @@ begin
         port map(
             clk => clk,
             rst => rst,
-            clr => clr,
+            clr => FlushE,
             en  => en,
             d   => instrD,
             q   => instrE
@@ -131,7 +132,7 @@ begin
         port map(
             clk => clk,
             rst => rst,
-            clr => clr,
+            clr => FlushE,
             en  => en,
             d(0)   => Jump,
             q(0)   => JumpE

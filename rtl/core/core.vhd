@@ -31,8 +31,6 @@ architecture RTL of core is
     signal READDATA : std_logic_vector(31 downto 0);
     signal JalrReg : std_logic;
     signal MIE : std_logic;
-    signal clr : std_logic := '0';
-    signal en : std_logic := '1';
     signal MEIE : std_logic;
     signal TRAP : std_logic;
     signal instr_D : std_Logic_vector(31 downto 0);
@@ -40,14 +38,13 @@ architecture RTL of core is
     signal CSRwrite : std_logic;
     signal MRET : std_logic;
     signal funct3M : std_logic_vector(2 downto 0);
+    signal FlushE : std_logic;
     
 begin
     DataPath_inst : entity work.DataPath
         port map(
             clk         => clk,
             rst         => rst,
-            clr         => clr,
-            en          => en,
             PC_Src      => PC_src,
             ImmSrc      => ImmSrc,
             instr       => instr,
@@ -70,14 +67,14 @@ begin
             MRET        => MRET,
             irq         => irq,
             instrD_DATAP=> instr_D,
-            funct3M     => funct3M
+            funct3M     => funct3M, 
+            FlushE_C    => FlushE
         );
+    
     controlblock_inst : entity work.controlblock
         port map(
             clk         => clk,
             rst         => rst,
-            clr         => clr,
-            en          => en,
             instrD      => instr_D,
             zero        => zero,
             Illegal     => Illegal,
@@ -96,7 +93,8 @@ begin
             TRAP        => TRAP,
             CSRop       => CSRop,
             CSWrite     => CSRwrite,
-            MRET        => MRET
+            MRET        => MRET,
+            FlushE      => FlushE
         );
     WriteBlock_inst : entity work.WriteBlock
         port map(

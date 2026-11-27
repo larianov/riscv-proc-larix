@@ -7,7 +7,8 @@ entity pc is
         clk : in std_logic;
         rst : in std_logic;
         PCNext : in std_logic_vector(31 downto 0);
-        PC_REG : out std_logic_vector(31 downto 0)
+        PC_REG : out std_logic_vector(31 downto 0);
+        StallF : in std_logic
     );
 end entity pc;
 
@@ -20,7 +21,9 @@ begin
             if rst = '1' then
                 PC_REG <= (x"0000_1000");
             else
-                PC_REG <= PCNext;
+                if StallF /= '1' then
+                    PC_REG <= PCNext;
+                end if;
             end if;
         end if;
     end process;

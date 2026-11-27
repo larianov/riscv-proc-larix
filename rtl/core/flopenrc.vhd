@@ -14,7 +14,7 @@ entity flopenrc is
         clr : in std_logic;
         en : in std_logic;
         d : in std_logic_vector(WIDTH-1 downto 0);
-        q : out std_logic_vector(WIDTH-1 downto 0);
+        q : out std_logic_vector(WIDTH-1 downto 0)
     );
 end entity flopenrc;
 

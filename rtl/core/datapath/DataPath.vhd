@@ -5,8 +5,6 @@ entity DataPath is
     port(
         clk : in std_logic;
         rst : in std_logic;
-        clr : in std_logic;
-        en : in std_logic;
         PC_Src : in std_logic_vector(1 downto 0);
         ImmSrc : in std_logic_vector(2 downto 0);
         instr : in std_logic_vector(31 downto 0);
@@ -30,11 +28,22 @@ entity DataPath is
         MRET : in std_logic;
         irq : in std_logic;
         funct3M : out std_logic_vector(2 downto 0);
-
+        RegWrite_W : out std_logic;
+        FlushE_C : out STD_LOGIC
     );
 end entity DataPath;
 
 architecture RTL of DataPath is
+    signal ForwardAE :  std_logic_vector(1 downto 0);
+    signal ForwardBE :  std_logic_vector(1 downto 0);
+    signal StallFT : std_logic;
+    signal StallF : std_logic;
+    signal StallDT : std_logic;
+    signal StallD : std_logic;
+    
+    signal FlushD : std_logic;
+    signal FlushE : std_logic;
+    
     signal ResultW : std_logic_vector(31 downto 0);
     signal PCPlus4M : std_logic_vector(31 downto 0);
     signal ReadDataW : std_logic_vector(31 downto 0);
@@ -78,9 +87,29 @@ architecture RTL of DataPath is
     signal instrE : std_logic_vector(31 downto 0);
     signal instrM : std_logic_vector(31 downto 0);
     signal instrW : std_logic_vector(31 downto 0);
-    
+    signal INPUT_SRC_ARD : std_logic_vector(31 downto 0);
+    signal INPUT_SRC_BRD : std_logic_vector(31 downto 0);    
+
 
 begin
+    MuxHazardForwarding_inst_A : entity work.MuxHazardForwarding
+        port map(
+            S            => ForwardAE,
+            Orig         => RD1E,
+            Result_W     => ResultW,
+            Alu_Result_M => Alu_Result_M,
+            OutP         => INPUT_SRC_ARD
+        );
+    MuxHazardForwarding_inst : entity work.MuxHazardForwarding
+        port map(
+            S            => ForwardBE,
+            Orig         => RD2E,
+            Result_W     => ResultW,
+            Alu_Result_M => Alu_Result_M,
+            OutP         => INPUT_SRC_BRD
+        );
+    
+    
 
     flopenrc_inst_INSTR : entity work.flopenrc
         generic map(
@@ -89,8 +118,8 @@ begin
         port map(
             clk => clk,
             rst => rst,
-            clr => clr,
-            en  => en,
+            clr => FlushD,
+            en  => StallD,
             d   => instr,
             q   => instrD
         );
@@ -101,8 +130,8 @@ begin
         port map(
             clk => clk,
             rst => rst,
-            clr => clr,
-            en  => en,
+            clr => FlushD,
+            en  => StallD,
             d   => PCPlus4F,
             q   => PCPlus4D
         );
@@ -113,8 +142,8 @@ begin
         port map(
             clk => clk,
             rst => rst,
-            clr => clr,
-            en  => en,
+            clr => FlushD,
+            en  => StallD,
             d   => PCF,
             q   => PCD
         );
@@ -124,7 +153,8 @@ begin
         clk    => clk,
         rst    => rst,
         PC_Reg     => PCF,
-        PCNext => PC_Next_F
+        PCNext => PC_Next_F,
+        StallF => StallF
     );
     PCPlus4_inst : entity work.PCPlus4
         port map(
@@ -139,8 +169,8 @@ begin
         port map(
             clk => clk,
             rst => rst,
-            clr => clr,
-            en  => en,
+            clr => FlushE,
+            en  => '1',
             d(0)   => JalrReg,
             q(0)   => JalrRegE
         );
@@ -148,7 +178,7 @@ begin
     MuxJalr_inst : entity work.MuxJalr
         port map(
             PC_NOW      => PCE,
-            RD1         => RD1E,
+            RD1         => INPUT_SRC_ARD,
             JalrReg     => JalrRegE,
             PCtarget_IN => PCtarget_E
         );
@@ -182,8 +212,8 @@ begin
         port map(
             clk => clk,
             rst => rst,
-            clr => clr,
-            en  => en,
+            clr => FlushE,
+            en  => '1',
             d(0)   => RegWrite,
             q(0)   => RegWriteE
         );
@@ -195,8 +225,8 @@ begin
         port map(
             clk => clk,
             rst => rst,
-            clr => clr,
-            en  => en,
+            clr => '0',
+            en  => '1',
             d(0)   => RegWriteE,
             q(0)   => RegWriteM
         );
@@ -207,8 +237,8 @@ begin
         port map(
             clk => clk,
             rst => rst,
-            clr => clr,
-            en  => en,
+            clr => '0',
+            en  => '1',
             d(0)   => RegWriteM,
             q(0)   => RegWriteW
         );
@@ -219,8 +249,8 @@ begin
         port map(
             clk => clk,
             rst => rst,
-            clr => clr,
-            en  => en,
+            clr => FlushE,
+            en  => '1',
             d   => instrD,
             q   => instrE
         );
@@ -231,8 +261,8 @@ begin
         port map(
             clk => clk,
             rst => rst,
-            clr => clr,
-            en  => en,
+            clr => '0',
+            en  => '1',
             d   => instrE,
             q   => instrM
         );
@@ -243,8 +273,8 @@ begin
         port map(
             clk => clk,
             rst => rst,
-            clr => clr,
-            en  => en,
+            clr => '0',
+            en  => '1',
             d   => instrM,
             q   => instrW
         );
@@ -270,8 +300,8 @@ begin
         port map(
             clk => clk,
             rst => rst,
-            clr => clr,
-            en  => en,
+            clr => FlushE,
+            en  => '1',
             d   => RD1D,
             q   => RD1E
         );
@@ -283,8 +313,8 @@ begin
         port map(
             clk => clk,
             rst => rst,
-            clr => clr,
-            en  => en,
+            clr => FlushE,
+            en  => '1',
             d   => RD2D,
             q   => RD2E
         );
@@ -296,8 +326,8 @@ begin
         port map(
             clk => clk,
             rst => rst,
-            clr => clr,
-            en  => en,
+            clr => FlushE,
+            en  => '1',
             d   => PCD,
             q   => PCE
         );
@@ -309,8 +339,8 @@ begin
         port map(
             clk => clk,
             rst => rst,
-            clr => clr,
-            en  => en,
+            clr => FlushE,
+            en  => '1',
             d   => ImmExtD,
             q   => ImmExtE
         );
@@ -321,8 +351,8 @@ begin
         port map(
             clk => clk,
             rst => rst,
-            clr => clr,
-            en  => en,
+            clr => FlushE,
+            en  => '1',
             d   => PCPlus4D,
             q   => PCPlus4E
         );
@@ -361,15 +391,15 @@ begin
         port map(
             clk => clk,
             rst => rst,
-            clr => clr,
-            en  => en,
+            clr => FlushE,
+            en  => '1',
             d(0)   => AluSrcB,
             q(0)   => AluSrcBE
         );
     
     alu_muxSRCB_inst : entity work.alu_mux
         port map(
-            rd2    => RD2E,
+            rd2    => INPUT_SRC_BRD,
             imm    => ImmExtE,
             S      => AluSrcBE,
             muxout => SRcBE
@@ -382,15 +412,15 @@ begin
         port map(
             clk => clk,
             rst => rst,
-            clr => clr,
-            en  => en,
+            clr => FlushE,
+            en  => '1',
             d   => AluSRCA,
             q   => AluSRCAE
         );
     
     SrcAMux_inst : entity work.SrcAMux
         port map(
-            SrcA => RD1E,
+            SrcA => INPUT_SRC_ARD,
             PC   => PCE,
             S    => AluSRCAE,
             Y    => SrcAE
@@ -402,8 +432,8 @@ begin
         port map(
             clk => clk,
             rst => rst,
-            clr => clr,
-            en  => en,
+            clr => FlushE,
+            en  => '1',
             d   => alu_control,
             q   => alu_controlE
         );
@@ -424,8 +454,8 @@ begin
         port map(
             clk => clk,
             rst => rst,
-            clr => clr,
-            en  => en,
+            clr => '0',
+            en  => '1',
             d   => Alu_Result_E,
             q   => Alu_Result_M
         );
@@ -436,8 +466,8 @@ begin
         port map(
             clk => clk,
             rst => rst,
-            clr => clr,
-            en  => en,
+            clr => '0',
+            en  => '1',
             d   => PCPlus4E,
             q   => PCPlus4M
         );
@@ -448,9 +478,9 @@ begin
         port map(
             clk => clk,
             rst => rst,
-            clr => clr,
-            en  => en,
-            d   => RD2E,
+            clr => '0',
+            en  => '1',
+            d   => INPUT_SRC_BRD,
             q   => RD2M
         );
     
@@ -462,8 +492,8 @@ begin
         port map(
             clk => clk,
             rst => rst,
-            clr => clr,
-            en  => en,
+            clr => '0',
+            en  => '1',
             d   => ReadData,
             q   => ReadDataW
         );
@@ -475,8 +505,8 @@ begin
         port map(
             clk => clk,
             rst => rst,
-            clr => clr,
-            en  => en,
+            clr => '0',
+            en  => '1',
             d   => Alu_Result_M,
             q   => Alu_Result_W
         );
@@ -487,8 +517,8 @@ begin
         port map(
             clk => clk,
             rst => rst,
-            clr => clr,
-            en  => en,
+            clr => '0',
+            en  => '1',
             d   => PCPlus4M,
             q   => PCPlus4W
         );
@@ -500,8 +530,8 @@ begin
         port map(
             clk => clk,
             rst => rst,
-            clr => clr,
-            en  => en,
+            clr => FlushE,
+            en  => '1',
             d   => Result_Src,
             q   => Result_SrcE
         );
@@ -512,8 +542,8 @@ begin
         port map(
             clk => clk,
             rst => rst,
-            clr => clr,
-            en  => en,
+            clr => '0',
+            en  => '1',
             d   => Result_SrcE,
             q   => Result_SrcM
         );
@@ -524,8 +554,8 @@ begin
         port map(
             clk => clk,
             rst => rst,
-            clr => clr,
-            en  => en,
+            clr => '0',
+            en  => '1',
             d   => Result_SrcM,
             q   => Result_SrcW
         );
@@ -540,10 +570,36 @@ begin
             CSR_RES    => CSR_RES,
             Mux_Res    => ResultW
         );
+
+    HazardController_inst : entity work.HazardController
+        port map(
+            StallF      => StallFT,
+            StallD      => StallDT,
+            FlushD      => FlushD,
+            Rs1D        => instrD(19 downto 15),
+            Rs2D        => instrD(24 downto 20),
+            Rs1E        => instrE(19 downto 15),
+            Rs2E        => instrE(24 downto 20),
+            RDE         => instrE(11 downto 7),
+            FlushE      => FlushE,
+            PCsrcE      => PC_Src,
+            ForwardAE   => ForwardAE,
+            ForwardBE   => ForwardBE,
+            Result_SrcE => Result_SrcE,
+            RdM         => instrM(11 downto 7),
+            RegWriteM   => RegWriteM,
+            RDW         => instrW(11 downto 7),
+            RegWriteW   => RegWriteW,
+            Result_SrcM => Result_SrcM
+        );
+    
     WD <= RD2M;
     instrD_DATAP <= instrD;
     PC <= PCF;
     REZ <= Alu_Result_M;
+    RegWrite_W <= RegWriteW;
     funct3M <= instrM(14 downto 12);
+    StallF <= not StallFT;
+    StallD <= not StallDT;
 end architecture RTL;
 
