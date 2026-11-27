@@ -31,16 +31,23 @@ architecture RTL of core is
     signal READDATA : std_logic_vector(31 downto 0);
     signal JalrReg : std_logic;
     signal MIE : std_logic;
+    signal clr : std_logic := '0';
+    signal en : std_logic := '1';
     signal MEIE : std_logic;
     signal TRAP : std_logic;
+    signal instr_D : std_Logic_vector(31 downto 0);
     signal CSRop : std_logic_vector(1 downto 0);
     signal CSRwrite : std_logic;
     signal MRET : std_logic;
+    signal funct3M : std_logic_vector(2 downto 0);
+    
 begin
     DataPath_inst : entity work.DataPath
         port map(
             clk         => clk,
             rst         => rst,
+            clr         => clr,
+            en          => en,
             PC_Src      => PC_src,
             ImmSrc      => ImmSrc,
             instr       => instr,
@@ -61,16 +68,22 @@ begin
             MIE         => MIE,
             MEIE        => MEIE,
             MRET        => MRET,
-            irq         => irq
+            irq         => irq,
+            instrD_DATAP=> instr_D,
+            funct3M     => funct3M
         );
     controlblock_inst : entity work.controlblock
         port map(
-            instr       => instr,
+            clk         => clk,
+            rst         => rst,
+            clr         => clr,
+            en          => en,
+            instrD      => instr_D,
             zero        => zero,
             Illegal     => Illegal,
             RegWrite    => RegWrite,
             ASrc        => ASrc,
-            BSrc      => BSrc,
+            BSrc        => BSrc,
             ImmSrc      => ImmSrc,
             alu_control => alu_control,
             PCsrc       => PC_src,
@@ -90,7 +103,7 @@ begin
             rd2         => WD_Temp,
             addr_2_bits => temp_res(1 downto 0),
             Mem_Write   => Mem_Write,
-            funct3      => instr(14 downto 12),
+            funct3      => funct3M,
             WE          => WE,
             wD          => WD
         );
@@ -99,7 +112,7 @@ begin
         port map(
             Memory_Data => OUT_OF_MEMORY_DATA,
             addr_2_bits => temp_res(1 downto 0),
-            funct3      => instr(14 downto 12),
+            funct3      => funct3M,
             ReadData    => READDATA
         );
     

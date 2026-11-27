@@ -21,7 +21,7 @@ architecture RTL of riscvregfile is
 begin
     clocking : process(clk) is
     begin
-        if rising_edge(clk) then
+        if falling_edge(clk) then
             if write_en = '1' and TO_INTEGER(UNSIGNED(write_idx)) /= 0 then
                 mem_array(TO_INTEGER(UNSIGNED(write_idx))) <= write_In;
             end if;

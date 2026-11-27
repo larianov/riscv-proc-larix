@@ -28,7 +28,9 @@ entity DataPath is
         MIE : out std_logic;
         MEIE : out std_logic;
         MRET : in std_logic;
-        irq : in std_logic
+        irq : in std_logic;
+        funct3M : out std_logic_vector(2 downto 0);
+
     );
 end entity DataPath;
 
@@ -542,6 +544,6 @@ begin
     instrD_DATAP <= instrD;
     PC <= PCF;
     REZ <= Alu_Result_M;
-
+    funct3M <= instrM(14 downto 12);
 end architecture RTL;
 
